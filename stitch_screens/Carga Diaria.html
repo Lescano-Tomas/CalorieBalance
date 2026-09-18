@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;700&amp;family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;min-height:100vh;}body{overscroll-behavior:none;background-color:#f8faf4;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 'tertiary-container': '#9b6857', 'outline-variant': '#ccc4cd', 'inverse-surface': '#2e312d', 'primary-container': '#7f6e90', 'secondary': '#4b635a', 'primary-fixed-dim': '#d3bfe5', 'on-tertiary-container': '#fffbff', 'tertiary-fixed-dim': '#f6b8a4', 'outline': '#7b757d', 'on-primary': '#ffffff', 'on-error': '#ffffff', 'secondary-fixed-dim': '#b2ccc1', 'on-secondary': '#ffffff', 'surface': '#f8faf4', 'on-secondary-fixed': '#072018', 'on-tertiary-fixed-variant': '#673c2d', 'error-container': '#ffdad6', 'surface-container-highest': '#e1e3dd', 'background': '#f8faf4', 'on-error-container': '#93000a', 'tertiary-fixed': '#ffdbcf', 'secondary-container': '#cde9dc', 'surface-variant': '#e1e3dd', 'on-primary-fixed-variant': '#504060', 'on-primary-fixed': '#231532', 'on-tertiary': '#ffffff', 'surface-bright': '#f8faf4', 'error': '#ba1a1a', 'secondary-fixed': '#cde9dc', 'on-secondary-fixed-variant': '#344c43', 'primary-fixed': '#efdbff', 'surface-dim': '#d8dbd5', 'surface-container-low': '#f2f4ee', 'surface-container-high': '#e7e9e3', 'on-surface-variant': '#4a454c', 'surface-container': '#edefe9', 'primary': '#665576', 'tertiary': '#7f5040', 'inverse-on-surface': '#eff1eb', 'surface-tint': '#685878', 'on-background': '#191c19', 'on-surface': '#191c19', 'on-primary-container': '#fffbff', 'on-tertiary-fixed': '#321206', 'surface-container-lowest': '#ffffff', 'on-secondary-container': '#516a60', 'inverse-primary': '#d3bfe5' }, borderRadius: { 'DEFAULT': '1rem', 'lg': '2rem', 'xl': '3rem', 'full': '9999px' }, spacing: { 'space-lg': '1.5rem', 'margin-tablet': '2rem', 'space-xs': '0.25rem', 'gutter': '1rem', 'margin-desktop': '3rem', 'gutter-desktop': '2rem', 'gutter-tablet': '1.5rem', 'space-md': '1rem', 'space-sm': '0.5rem', 'margin': '1.25rem', 'space-xl': '2.5rem' }, fontFamily: { 'body-lg': ['DM Sans'], 'headline-xl-mobile': ['Bricolage Grotesque'], 'body-sm': ['DM Sans'], 'label-lg': ['DM Sans'], 'body-md': ['DM Sans'], 'label-sm': ['DM Sans'], 'label-md': ['DM Sans'], 'headline-md': ['Bricolage Grotesque'], 'headline-lg-mobile': ['Bricolage Grotesque'], 'headline-lg': ['Bricolage Grotesque'], 'headline-sm': ['Bricolage Grotesque'], 'headline-xl': ['Bricolage Grotesque'] }, fontSize: { 'body-lg': ['18px', { lineHeight: '26px', fontWeight: '400' }], 'headline-xl-mobile': ['32px', { lineHeight: '40px', fontWeight: '700' }], 'body-sm': ['13px', { lineHeight: '18px', fontWeight: '400' }], 'label-lg': ['14px', { lineHeight: '20px', fontWeight: '500' }], 'body-md': ['15px', { lineHeight: '22px', fontWeight: '400' }], 'label-sm': ['10px', { lineHeight: '14px', fontWeight: '600' }], 'label-md': ['12px', { lineHeight: '16px', fontWeight: '500' }], 'headline-md': ['22px', { lineHeight: '28px', fontWeight: '600' }], 'headline-lg-mobile': ['24px', { lineHeight: '32px', fontWeight: '600' }], 'headline-lg': ['30px', { lineHeight: '38px', fontWeight: '600' }], 'headline-sm': ['18px', { lineHeight: '24px', fontWeight: '600' }], 'headline-xl': ['40px', { lineHeight: '48px', fontWeight: '700' }] } } } }</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface text-on-surface font-body-md text-body-md antialiased flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-50 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.03)] pt-safe"><div class="h-16 px-margin flex items-center justify-between max-w-xl mx-auto"><div class="flex items-center gap-space-sm"><div class="w-9 h-9 rounded-full bg-primary-fixed flex items-center justify-center"><span class="material-symbols-outlined text-primary text-[20px]">vital_signs</span></div><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight">CalorieBalance</span><span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Carga Diaria</span></div></div><div class="flex items-center gap-space-sm"><div class="hidden sm:flex items-center px-space-sm py-1 bg-secondary-container rounded-full"><span class="font-label-sm text-label-sm text-on-secondary-container font-medium">En balance</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full max-w-xl mx-auto px-margin pt-16 pb-28 bg-surface"><div class="flex flex-col w-full space-y-space-md">
+<!-- Day Selector Pill Strip -->
+<div class="flex items-center justify-between bg-surface-container-low p-1.5 rounded-full">
+<div class="flex items-center gap-1 w-full" id="day-toggle-group">
+<button class="flex-1 py-2 px-space-md rounded-full text-center font-label-md text-label-md text-on-surface-variant transition-all hover:text-on-surface" id="btn-yesterday" type="button">
+        Ayer
+      </button>
+<button class="flex-1 py-2 px-space-md rounded-full text-center font-label-md text-label-md bg-surface-container-lowest shadow-sm text-primary font-semibold transition-all" id="btn-today" type="button">
+        Hoy
+      </button>
+</div>
+</div>
+<!-- Header Section with Gemini Badge -->
+<div class="flex flex-col gap-1 px-1">
+<div class="flex items-center justify-between">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface font-semibold tracking-tight">Registro Diario</h1>
+<span class="inline-flex items-center gap-1 px-space-sm py-1 rounded-full bg-primary-fixed/60 text-on-primary-fixed text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+        Gemini AI
+      </span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Carga el estimado calórico calculado por Gemini o ingresa el tuyo.</p>
+</div>
+<!-- Main Hero Input Card -->
+<div class="relative overflow-hidden bg-surface-container-lowest rounded-lg p-space-lg shadow-sm space-y-space-md">
+<!-- Subtle Top Ambient Glow -->
+<div class="absolute -top-16 -right-16 w-36 h-36 bg-primary-fixed/40 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-md text-label-md uppercase tracking-wider font-semibold">Total Consumido</span>
+<span class="inline-flex items-center gap-1 text-label-sm font-label-sm text-secondary bg-secondary-fixed/50 px-2 py-0.5 rounded-full font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+        Sincronizado
+      </span>
+</div>
+<!-- Massive Calorie Display & Quick Steppers -->
+<div class="flex flex-col items-center justify-center py-2 space-y-2">
+<div class="flex items-baseline justify-center gap-2">
+<input aria-label="Calorías consumidas" class="font-headline-xl text-headline-xl text-center font-bold text-on-surface bg-transparent focus:outline-none w-44 tracking-tight" id="calorie-input" inputmode="numeric" max="5000" min="0" step="25" type="number" value="1650"/>
+<span class="font-headline-sm text-headline-sm text-on-surface-variant font-medium">kcal</span>
+</div>
+<!-- Quick Adjustment Nudges -->
+<div class="flex items-center gap-space-sm pt-1">
+<button class="flex items-center justify-center w-8 h-8 rounded-full bg-surface-container-low text-on-surface-variant active:scale-95 transition-transform" id="sub-50" type="button">
+<span class="material-symbols-outlined text-[16px]">remove</span>
+</button>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium px-1">Ajuste rápido</span>
+<button class="flex items-center justify-center w-8 h-8 rounded-full bg-surface-container-low text-on-surface-variant active:scale-95 transition-transform" id="add-50" type="button">
+<span class="material-symbols-outlined text-[16px]">add</span>
+</button>
+</div>
+</div>
+<!-- Dynamic Status Banner (Pastel Reassurance) -->
+<div class="flex items-center justify-between px-space-md py-2.5 rounded-full bg-secondary-fixed/40 transition-colors duration-300" id="status-pill">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-secondary text-[18px]" id="status-icon">check_circle</span>
+<span class="font-label-md text-label-md text-on-secondary-fixed-variant truncate font-medium" id="status-text">
+          En déficit (-150 kcal del umbral)
+        </span>
+</div>
+<span class="font-label-sm text-label-sm font-semibold px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed shrink-0" id="budget-badge">
+        Meta Lograda
+      </span>
+</div>
+<!-- Friendly Visual Progress Strip -->
+<div class="space-y-1.5 pt-1">
+<div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant">
+<span>0 kcal</span>
+<span class="font-semibold text-primary">Umbral: 1.800 kcal</span>
+<span>2.400 kcal</span>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden relative">
+<div class="h-full bg-secondary rounded-full transition-all duration-300" id="progress-bar" style="width: 68.75%;"></div>
+<!-- Threshold Marker -->
+<div class="absolute top-0 bottom-0 w-0.5 bg-primary/70" style="left: 75%;"></div>
+</div>
+</div>
+</div>
+<!-- Editorial Companion Meal Card with Visual Richness -->
+<div class="bg-surface-container-lowest rounded-lg p-space-md shadow-sm flex items-center gap-space-md">
+<div class="w-16 h-16 rounded-DEFAULT overflow-hidden shrink-0 relative">
+<img class="w-full h-full object-cover" data-alt="A clean, minimalist overhead photo of a colorful balanced bowl with quinoa, roasted sweet potatoes, crisp greens, and tender avocado in soft morning daylight with pastel lilac and green ceramic tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfa2aLmqJkqmfAGv_enD6SkNaOH16vXuLsN1MMCU_E1KS-p0Xuyqr5386IOZ9aELCC1BZhfF8sXae7x2v7gv_wXLBXALKonCrqI5xuQsnJ6Lsex8NRYYvP-UHd35saChseJm9i4TjomUnxFjjpFOT_yv_nxaTj7BD71dkUuFs5XEEcfLynaNZJqzgsB8qT2xhIFy1RjY2Hhruah-0tkCTCO69eB7USya1AfO_VsRX9ic7nu-QKpB7jjw"/>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-medium">Lectura Estimada</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">14:30 hs</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface font-medium truncate">Menú nutritivo &amp; colación liviana</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Cálculo de porciones procesado por IA</p>
+</div>
+</div>
+<!-- Daily Summary Micro-Bento Card -->
+<div class="bg-surface-container-low rounded-lg p-space-md space-y-space-sm">
+<span class="font-label-md text-label-md text-on-surface-variant font-semibold tracking-wide uppercase">Resumen del Día</span>
+<div class="grid grid-cols-3 gap-2 pt-1 text-center">
+<div class="bg-surface-container-lowest p-2.5 rounded-DEFAULT shadow-sm flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Umbral</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold mt-0.5">1.800</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">kcal</span>
+</div>
+<div class="bg-surface-container-lowest p-2.5 rounded-DEFAULT shadow-sm flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Consumo</span>
+<span class="font-headline-sm text-headline-sm text-primary font-semibold mt-0.5" id="summary-consumed">1.650</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">kcal</span>
+</div>
+<div class="bg-surface-container-lowest p-2.5 rounded-DEFAULT shadow-sm flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary font-medium" id="summary-diff-label">Déficit</span>
+<span class="font-headline-sm text-headline-sm text-secondary font-semibold mt-0.5" id="summary-deficit">-150</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">kcal</span>
+</div>
+</div>
+</div>
+<!-- Gemini Friendly Tip Card -->
+<div class="flex items-start gap-space-sm p-space-md rounded-lg bg-surface-container-highest/60 text-on-surface">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-primary text-[18px]">temp_preferences_custom</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="font-label-md text-label-md font-semibold text-primary">Nota consciente de Gemini</span>
+<span class="material-symbols-outlined text-[13px] text-primary">verified</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5 leading-relaxed" id="gemini-quote">
+        Buen balance calórico hoy manteniendo un ritmo sostenible. Hidrátate con calma antes de cenar.
+      </p>
+</div>
+</div>
+<!-- Primary Floating Action Button -->
+<div class="pt-2 pb-1">
+<button class="w-full h-14 rounded-full bg-primary text-on-primary font-label-lg text-label-lg font-semibold flex items-center justify-center gap-2 shadow-md hover:bg-primary-container active:scale-[0.98] transition-all" id="save-record-btn" type="button">
+<span class="material-symbols-outlined text-[20px]">cloud_done</span>
+<span>Guardar Registro de Hoy</span>
+</button>
+</div>
+<!-- Interactive Feedback Toast (Hidden by default) -->
+<div class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-inverse-surface text-inverse-on-surface px-space-md py-2.5 rounded-full shadow-lg items-center gap-2 text-label-md font-label-md transition-opacity duration-300" id="save-toast">
+<span class="material-symbols-outlined text-[18px] text-secondary-fixed">check_circle</span>
+<span>¡Registro guardado exitosamente!</span>
+</div>
+</div>
+<script>
+  (function() {
+    const input = document.getElementById('calorie-input');
+    const summaryConsumed = document.getElementById('summary-consumed');
+    const summaryDeficit = document.getElementById('summary-deficit');
+    const summaryDiffLabel = document.getElementById('summary-diff-label');
+    const statusPill = document.getElementById('status-pill');
+    const statusIcon = document.getElementById('status-icon');
+    const statusText = document.getElementById('status-text');
+    const budgetBadge = document.getElementById('budget-badge');
+    const progressBar = document.getElementById('progress-bar');
+    const geminiQuote = document.getElementById('gemini-quote');
+    const saveBtn = document.getElementById('save-record-btn');
+    const toast = document.getElementById('save-toast');
+
+    const threshold = 1800;
+    const maxReference = 2400;
+
+    function recalculate() {
+      let val = parseInt(input.value, 10);
+      if (isNaN(val) || val < 0) val = 0;
+      
+      summaryConsumed.textContent = val.toLocaleString();
+      const diff = val - threshold;
+      const progressPercent = Math.min(Math.max((val / maxReference) * 100, 2), 100);
+      progressBar.style.width = progressPercent + '%';
+
+      if (diff <= 0) {
+        const absDiff = Math.abs(diff);
+        summaryDiffLabel.textContent = 'Déficit';
+        summaryDiffLabel.className = 'font-label-sm text-label-sm text-secondary font-medium';
+        summaryDeficit.textContent = '-' + absDiff;
+        summaryDeficit.className = 'font-headline-sm text-headline-sm text-secondary font-semibold mt-0.5';
+
+        statusPill.className = 'flex items-center justify-between px-space-md py-2.5 rounded-full bg-secondary-fixed/40 transition-colors duration-300';
+        statusIcon.className = 'material-symbols-outlined text-secondary text-[18px]';
+        statusIcon.textContent = 'check_circle';
+        statusText.className = 'font-label-md text-label-md text-on-secondary-fixed-variant truncate font-medium';
+        statusText.textContent = `En déficit (-${absDiff} kcal del umbral de 1.800 kcal)`;
+        
+        budgetBadge.className = 'font-label-sm text-label-sm font-semibold px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed shrink-0';
+        budgetBadge.textContent = 'Meta Lograda';
+        progressBar.className = 'h-full bg-secondary rounded-full transition-all duration-300';
+        geminiQuote.textContent = 'Buen balance calórico hoy manteniendo un ritmo sostenible. Hidrátate con calma.';
+      } else {
+        summaryDiffLabel.textContent = 'Superávit';
+        summaryDiffLabel.className = 'font-label-sm text-label-sm text-tertiary font-medium';
+        summaryDeficit.textContent = '+' + diff;
+        summaryDeficit.className = 'font-headline-sm text-headline-sm text-tertiary font-semibold mt-0.5';
+
+        statusPill.className = 'flex items-center justify-between px-space-md py-2.5 rounded-full bg-tertiary-fixed/60 transition-colors duration-300';
+        statusIcon.className = 'material-symbols-outlined text-tertiary text-[18px]';
+        statusIcon.textContent = 'info';
+        statusText.className = 'font-label-md text-label-md text-on-tertiary-fixed-variant truncate font-medium';
+        statusText.textContent = `Superávit (+${diff} kcal sobre el umbral de 1.800)`;
+
+        budgetBadge.className = 'font-label-sm text-label-sm font-semibold px-2 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant shrink-0';
+        budgetBadge.textContent = 'Sobre Meta';
+        progressBar.className = 'h-full bg-tertiary-fixed-dim rounded-full transition-all duration-300';
+        geminiQuote.textContent = 'Estás un poco por encima del umbral planificado. No pasa nada: la regularidad semanal es lo que cuenta.';
+      }
+    }
+
+    input.addEventListener('input', recalculate);
+
+    document.getElementById('add-50').addEventListener('click', function() {
+      let cur = parseInt(input.value, 10) || 0;
+      input.value = cur + 50;
+      recalculate();
+    });
+
+    document.getElementById('sub-50').addEventListener('click', function() {
+      let cur = parseInt(input.value, 10) || 0;
+      input.value = Math.max(0, cur - 50);
+      recalculate();
+    });
+
+    // Date Switchers
+    const btnToday = document.getElementById('btn-today');
+    const btnYesterday = document.getElementById('btn-yesterday');
+
+    btnYesterday.addEventListener('click', function() {
+      btnYesterday.className = 'flex-1 py-2 px-space-md rounded-full text-center font-label-md text-label-md bg-surface-container-lowest shadow-sm text-primary font-semibold transition-all';
+      btnToday.className = 'flex-1 py-2 px-space-md rounded-full text-center font-label-md text-label-md text-on-surface-variant transition-all hover:text-on-surface';
+      input.value = 1720;
+      saveBtn.querySelector('span:last-child').textContent = 'Guardar Registro de Ayer';
+      recalculate();
+    });
+
+    btnToday.addEventListener('click', function() {
+      btnToday.className = 'flex-1 py-2 px-space-md rounded-full text-center font-label-md text-label-md bg-surface-container-lowest shadow-sm text-primary font-semibold transition-all';
+      btnYesterday.className = 'flex-1 py-2 px-space-md rounded-full text-center font-label-md text-label-md text-on-surface-variant transition-all hover:text-on-surface';
+      input.value = 1650;
+      saveBtn.querySelector('span:last-child').textContent = 'Guardar Registro de Hoy';
+      recalculate();
+    });
+
+    // Save feedback
+    saveBtn.addEventListener('click', function() {
+      saveBtn.classList.add('scale-95');
+      setTimeout(function() {
+        saveBtn.classList.remove('scale-95');
+        toast.classList.remove('hidden');
+        toast.classList.add('flex');
+        setTimeout(function() {
+          toast.classList.add('hidden');
+          toast.classList.remove('flex');
+        }, 2500);
+      }, 150);
+    });
+
+    // Highlight active nav item
+    const navItem = document.querySelector('nav a[data-path="carga-diaria"]');
+    if (navItem) {
+      navItem.className = "flex flex-1 flex-col items-center justify-center gap-0.5 py-space-xs px-space-xs rounded-2xl text-primary bg-primary-fixed/50 font-semibold transition-all min-h-[48px]";
+    }
+  })();
+</script></main><nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-2px_16px_rgba(102,85,118,0.08)]" data-active-classes="text-primary bg-primary-fixed/50 font-semibold"><div class="flex items-center justify-between h-20 max-w-md mx-auto px-margin gap-space-xs"><a aria-current="page" class="flex flex-1 flex-col items-center justify-center gap-0.5 py-space-xs px-space-xs rounded-2xl transition-all min-h-[48px] text-primary bg-primary-fixed/50 font-semibold" data-path="carga-diaria" href="#"><span class="material-symbols-outlined text-[22px]">edit_calendar</span><span class="font-label-md text-label-md leading-tight">Carga Diaria</span></a><a class="flex flex-1 flex-col items-center justify-center gap-0.5 py-space-xs px-space-xs rounded-2xl text-on-surface-variant transition-all min-h-[48px]" data-path="graficos" href="#"><span class="material-symbols-outlined text-[22px]">bar_chart</span><span class="font-label-md text-label-md leading-tight">Gráficos</span></a><a class="flex flex-1 flex-col items-center justify-center gap-0.5 py-space-xs px-space-xs rounded-2xl text-on-surface-variant transition-all min-h-[48px]" data-path="historial-y-pasados" href="#"><span class="material-symbols-outlined text-[22px]">history</span><span class="font-label-md text-label-md leading-tight">Historial &amp; Pasados</span></a></div></nav></body></html>

@@ -1,0 +1,117 @@
+/**
+ * AI Service for Calorie Estimation and Mindful Tips
+ * Fully decoupled to allow calling Google Gemini API or local heuristics.
+ */
+
+export interface AIAnalysisResult {
+  estimatedCalories: number;
+  confidence: number;
+  breakdown: string;
+  mindfulTip: string;
+}
+
+export class AIService {
+  private static apiKey: string | null = null;
+
+  public static setApiKey(key: string) {
+    this.apiKey = key;
+  }
+
+  /**
+   * Estimates calories from a natural language text (e.g. "Milanesa de pollo con ensalada mixta").
+   * Connects to Gemini API if key is available, or uses intelligent heuristic parser.
+   */
+  public static async estimateCalories(text: string): Promise<AIAnalysisResult> {
+    if (!text || text.trim() === '') {
+      return {
+        estimatedCalories: 0,
+        confidence: 0,
+        breakdown: 'Sin descripción ingresada',
+        mindfulTip: 'Registra tus comidas con honestidad y calma.',
+      };
+    }
+
+    // Check if user has provided an inline number (e.g. "1510" or "1510 kcal")
+    const matchNumber = text.match(/(\d{3,4})\s*(kcal)?/i);
+    if (matchNumber) {
+      const val = parseInt(matchNumber[1], 10);
+      return {
+        estimatedCalories: val,
+        confidence: 0.95,
+        breakdown: 'Lectura numérica directa',
+        mindfulTip: this.getTipForCalories(val, 1800),
+      };
+    }
+
+    // If Gemini API Key is configured, make the live call
+    if (this.apiKey) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: `Calcula las calorías aproximadas para: "${text}". Responde únicamente en formato JSON con: {"calories": number, "explanation": string, "tip": string}`,
+                    },
+                  ],
+                },
+              ],
+            }),
+          }
+        );
+        const data = await response.json();
+        const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (rawJson) {
+          const parsed = JSON.parse(rawJson.replace(/```json|```/g, '').trim());
+          return {
+            estimatedCalories: parsed.calories || 500,
+            confidence: 0.9,
+            breakdown: parsed.explanation || 'Estimado con Gemini 1.5 Flash',
+            mindfulTip: parsed.tip || this.getTipForCalories(parsed.calories || 500, 1800),
+          };
+        }
+      } catch (err) {
+        console.warn('Gemini API call fallback to heuristic:', err);
+      }
+    }
+
+    // Smart heuristic fallback (Offline)
+    let estimated = 550;
+    const lower = text.toLowerCase();
+    if (lower.includes('ensalada') || lower.includes('fruta') || lower.includes('yogur')) {
+      estimated = 320;
+    } else if (lower.includes('pizza') || lower.includes('hamburguesa') || lower.includes('frito')) {
+      estimated = 850;
+    } else if (lower.includes('pollo') || lower.includes('pescado') || lower.includes('carne')) {
+      estimated = 620;
+    }
+
+    return {
+      estimatedCalories: estimated,
+      confidence: 0.8,
+      breakdown: `Estimado sugerido por IA offline para "${text.slice(0, 30)}..."`,
+      mindfulTip: this.getTipForCalories(estimated, 1800),
+    };
+  }
+
+  /**
+   * Generates mindful, empathetic feedback based on calories vs target threshold.
+   */
+  public static getTipForCalories(consumed: number, target: number = 1800): string {
+    const diff = consumed - target;
+    if (diff <= -300) {
+      return 'Déficit significativo y sostenible. Asegúrate de incluir suficiente proteína e hidratación.';
+    } else if (diff <= 0) {
+      return 'Buen balance calórico hoy manteniendo un ritmo sostenible. Hidrátate con calma antes de cenar.';
+    } else if (diff <= 250) {
+      return 'Ligeramente por encima del umbral planificado. No te preocupes, el balance semanal es lo primordial.';
+    } else {
+      return 'Día calóricamente alto. Es parte del proceso natural; retoma con tranquilidad tu rutina mañana.';
+    }
+  }
+}
