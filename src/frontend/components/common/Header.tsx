@@ -7,9 +7,14 @@ import { StatusBadge } from '../ui/StatusBadge';
 interface HeaderProps {
   subtitle: string;
   isDeficit?: boolean;
+  onPressProfile?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ subtitle, isDeficit = true }) => {
+export const Header: React.FC<HeaderProps> = ({
+  subtitle,
+  isDeficit = true,
+  onPressProfile,
+}) => {
   return (
     <View style={styles.headerContainer}>
       <View style={styles.leftSection}>
@@ -25,7 +30,11 @@ export const Header: React.FC<HeaderProps> = ({ subtitle, isDeficit = true }) =>
       <View style={styles.rightSection}>
         <StatusBadge isDeficit={isDeficit} text={isDeficit ? 'En balance' : 'Superávit'} />
 
-        <TouchableOpacity style={styles.avatarButton} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.avatarButton}
+          activeOpacity={0.8}
+          onPress={onPressProfile}
+        >
           <MaterialIcons name="person" size={18} color={colors.onPrimary} />
         </TouchableOpacity>
       </View>

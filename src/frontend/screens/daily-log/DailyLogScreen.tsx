@@ -9,54 +9,95 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing } from '@/frontend/theme';
 import { Card, Button, StatusBadge } from '@/frontend/components/ui';
 import { ProgressBar } from '@/frontend/components/metrics';
 import { Toast } from '@/frontend/components/common';
-import { DailyLogRepository } from '@/data/repositories';
+import { DailyLogRepository, UserProfileRepository } from '@/data/repositories';
 import { CalorieCalculator } from '@/backend/calculations/calorieCalculator';
+import { UserProfile } from '@/types';
 
 interface DailyLogScreenProps {
   onDataChanged?: () => void;
+  userProfile?: UserProfile | null;
 }
 
-export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged }) => {
-  const [selectedDay, setSelectedDay] = useState<'today' | 'yesterday'>('today');
-  const [calories, setCalories] = useState<number>(1750);
+export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({
+  onDataChanged,
+  userProfile,
+}) => {
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [calories, setCalories] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [toastVisible, setToastVisible] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string>('');
 
-  const targetCalories = 1800;
-  const maxReference = 2400;
+  const targetCalories = userProfile?.target_calories || 1800;
+  const maxReference = Math.round(targetCalories * 1.35);
 
-  const getDateString = (day: 'today' | 'yesterday') => {
-    const d = new Date();
-    if (day === 'yesterday') {
-      d.setDate(d.getDate() - 1);
-    }
+  const formatDateStr = (d: Date) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const dayOfMonth = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${dayOfMonth}`;
   };
 
-  const currentDateStr = getDateString(selectedDay);
+  const currentDateStr = formatDateStr(currentDate);
+
+  const isToday = (d: Date) => {
+    const now = new Date();
+    return (
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+    );
+  };
+
+  const isYesterday = (d: Date) => {
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    return (
+      d.getDate() === y.getDate() &&
+      d.getMonth() === y.getMonth() &&
+      d.getFullYear() === y.getFullYear()
+    );
+  };
+
+  const getDateLabel = (d: Date) => {
+    const monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+    ];
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+    const dayNum = d.getDate();
+    const monthStr = monthNames[d.getMonth()];
+
+    if (isToday(d)) {
+      return `Hoy, ${dayNum} de ${monthStr}`;
+    }
+    if (isYesterday(d)) {
+      return `Ayer, ${dayNum} de ${monthStr}`;
+    }
+    return `${dayNames[d.getDay()]} ${dayNum} de ${monthStr}`;
+  };
 
   useEffect(() => {
-    loadLogForDay(selectedDay);
-  }, [selectedDay]);
+    loadLogForDate(currentDate);
+  }, [currentDate, userProfile]);
 
-  const loadLogForDay = async (day: 'today' | 'yesterday') => {
+  const loadLogForDate = async (d: Date) => {
     setLoading(true);
     try {
-      const dateStr = getDateString(day);
+      const dateStr = formatDateStr(d);
       const record = await DailyLogRepository.getByDate(dateStr);
       if (record) {
         setCalories(record.calories_consumed);
       } else {
-        setCalories(day === 'today' ? 1750 : 1720);
+        // Default to 0 or target if empty
+        setCalories(0);
       }
     } catch (err) {
       console.error('Error loading log:', err);
@@ -65,7 +106,22 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
     }
   };
 
-  const handleAdjust = (delta: number) => {
+  const handleAdjustDate = (deltaDays: number) => {
+    const nextDate = new Date(currentDate);
+    nextDate.setDate(nextDate.getDate() + deltaDays);
+    // Don't allow navigating into the future
+    const now = new Date();
+    if (nextDate > now && !isToday(nextDate)) {
+      return;
+    }
+    setCurrentDate(nextDate);
+  };
+
+  const handleReturnToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  const handleAdjustCalories = (delta: number) => {
     setCalories((prev) => Math.max(0, prev + delta));
   };
 
@@ -75,12 +131,14 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
       await DailyLogRepository.saveLog(
         currentDateStr,
         calories,
-        targetCalories
+        targetCalories,
+        undefined,
+        userProfile?.id
       );
       setToastMessage(
-        selectedDay === 'today'
+        isToday(currentDate)
           ? `¡Guardado! ${calories.toLocaleString()} kcal registradas hoy`
-          : `¡Actualizado! ${calories.toLocaleString()} kcal registradas ayer`
+          : `¡Actualizado! ${calories.toLocaleString()} kcal para ${getDateLabel(currentDate)}`
       );
       setToastVisible(true);
       if (onDataChanged) onDataChanged();
@@ -103,42 +161,41 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Day Selector Pill Strip */}
-        <View style={styles.daySelectorContainer}>
+        {/* Sleek Date Navigator: < Hoy, 20 de Septiembre > */}
+        <View style={styles.dateNavigatorContainer}>
           <TouchableOpacity
-            style={[
-              styles.dayTab,
-              selectedDay === 'yesterday' && styles.dayTabActive,
-            ]}
-            onPress={() => setSelectedDay('yesterday')}
-            activeOpacity={0.8}
+            style={styles.navArrowButton}
+            onPress={() => handleAdjustDate(-1)}
+            activeOpacity={0.7}
           >
-            <Text
-              style={[
-                styles.dayTabText,
-                selectedDay === 'yesterday' && styles.dayTabTextActive,
-              ]}
-            >
-              Ayer
-            </Text>
+            <MaterialIcons name="chevron-left" size={26} color={colors.onSurface} />
           </TouchableOpacity>
 
+          <View style={styles.dateCenterBlock}>
+            <Text style={styles.dateHeading}>{getDateLabel(currentDate)}</Text>
+            {!isToday(currentDate) && (
+              <TouchableOpacity
+                style={styles.returnTodayChip}
+                onPress={handleReturnToToday}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="today" size={12} color={colors.primary} />
+                <Text style={styles.returnTodayText}>Volver a hoy</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
           <TouchableOpacity
-            style={[
-              styles.dayTab,
-              selectedDay === 'today' && styles.dayTabActive,
-            ]}
-            onPress={() => setSelectedDay('today')}
-            activeOpacity={0.8}
+            style={[styles.navArrowButton, isToday(currentDate) && styles.navArrowDisabled]}
+            onPress={() => handleAdjustDate(1)}
+            disabled={isToday(currentDate)}
+            activeOpacity={0.7}
           >
-            <Text
-              style={[
-                styles.dayTabText,
-                selectedDay === 'today' && styles.dayTabTextActive,
-              ]}
-            >
-              Hoy
-            </Text>
+            <MaterialIcons
+              name="chevron-right"
+              size={26}
+              color={isToday(currentDate) ? colors.outlineVariant : colors.onSurface}
+            />
           </TouchableOpacity>
         </View>
 
@@ -150,7 +207,6 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
           <View style={styles.mainFocusArea}>
             {/* Core Card */}
             <Card style={styles.heroCard}>
-              {/* Header inside Card */}
               <View style={styles.heroTopRow}>
                 <Text style={styles.heroLabel}>TOTAL CONSUMIDO</Text>
                 <StatusBadge isDeficit={isDeficit} diff={diff} compact />
@@ -178,7 +234,7 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
               <View style={styles.nudgeRow}>
                 <TouchableOpacity
                   style={styles.nudgeChip}
-                  onPress={() => handleAdjust(-100)}
+                  onPress={() => handleAdjustCalories(-100)}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.nudgeChipText}>-100</Text>
@@ -186,7 +242,7 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
 
                 <TouchableOpacity
                   style={styles.nudgeChip}
-                  onPress={() => handleAdjust(-50)}
+                  onPress={() => handleAdjustCalories(-50)}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.nudgeChipText}>-50</Text>
@@ -194,7 +250,7 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
 
                 <TouchableOpacity
                   style={[styles.nudgeChip, styles.nudgeChipPositive]}
-                  onPress={() => handleAdjust(50)}
+                  onPress={() => handleAdjustCalories(50)}
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.nudgeChipText, styles.nudgeChipPositiveText]}>+50</Text>
@@ -202,14 +258,14 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
 
                 <TouchableOpacity
                   style={[styles.nudgeChip, styles.nudgeChipPositive]}
-                  onPress={() => handleAdjust(100)}
+                  onPress={() => handleAdjustCalories(100)}
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.nudgeChipText, styles.nudgeChipPositiveText]}>+100</Text>
                 </TouchableOpacity>
               </View>
 
-              {/* Subtle Progress Bar */}
+              {/* Subtle Progress Bar with Dynamic Target */}
               <ProgressBar
                 consumed={calories}
                 target={targetCalories}
@@ -225,7 +281,7 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
                   ]}
                 >
                   {isDeficit
-                    ? `Te quedan ${absDiff.toLocaleString()} kcal para tu meta (1.800 kcal)`
+                    ? `Te quedan ${absDiff.toLocaleString()} kcal para tu meta (${targetCalories.toLocaleString()} kcal)`
                     : `Superávit de +${absDiff.toLocaleString()} kcal sobre tu meta`}
                 </Text>
               </View>
@@ -268,36 +324,57 @@ const styles = StyleSheet.create({
     marginHorizontal: 'auto',
     width: '100%',
   },
-  daySelectorContainer: {
+  dateNavigatorContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: colors.surfaceContainerLow,
     borderRadius: spacing.radius.pill,
-    padding: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     marginBottom: spacing.lg,
   },
-  dayTab: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: spacing.radius.pill,
+  navArrowButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceContainerLowest,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  navArrowDisabled: {
+    opacity: 0.35,
+    backgroundColor: 'transparent',
+    elevation: 0,
+  },
+  dateCenterBlock: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dayTabActive: {
-    backgroundColor: colors.surfaceContainerLowest,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  dayTabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.onSurfaceVariant,
-  },
-  dayTabTextActive: {
-    color: colors.primary,
+  dateHeading: {
+    fontSize: 15,
     fontWeight: '700',
+    color: colors.onSurface,
+  },
+  returnTodayChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primaryFixed,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: spacing.radius.pill,
+    marginTop: 2,
+  },
+  returnTodayText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.primary,
   },
   loadingContainer: {
     paddingVertical: 60,

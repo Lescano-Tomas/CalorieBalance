@@ -19,12 +19,13 @@ export class MealEntryRepository {
     const db = await getDatabase();
     const nowIso = new Date().toISOString();
     const res = await db.runAsync(
-      `INSERT INTO meal_entries (daily_log_id, title, calories, time, created_at)
-       VALUES (?, ?, ?, ?, ?);`,
+      `INSERT INTO meal_entries (daily_log_id, title, calories, time, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?);`,
       dailyLogId,
       title,
       calories,
       time || null,
+      nowIso,
       nowIso
     );
     return {
@@ -34,6 +35,7 @@ export class MealEntryRepository {
       calories,
       time,
       created_at: nowIso,
+      updated_at: nowIso,
     };
   }
 

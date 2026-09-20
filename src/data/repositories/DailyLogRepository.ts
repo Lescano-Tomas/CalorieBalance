@@ -15,7 +15,8 @@ export class DailyLogRepository {
     date: string,
     calories: number,
     targetCalories: number = 1800,
-    notes?: string
+    notes?: string,
+    userId?: number
   ): Promise<DailyLog> {
     const db = await getDatabase();
     const existing = await this.getByDate(date);
@@ -24,19 +25,21 @@ export class DailyLogRepository {
     if (existing) {
       await db.runAsync(
         `UPDATE daily_logs 
-         SET calories_consumed = ?, target_calories = ?, notes = ?, updated_at = ?
+         SET calories_consumed = ?, target_calories = ?, notes = ?, user_id = COALESCE(?, user_id), updated_at = ?
          WHERE date = ?;`,
         calories,
         targetCalories,
         notes || existing.notes || null,
+        userId || null,
         nowIso,
         date
       );
       return (await this.getByDate(date))!;
     } else {
       const res = await db.runAsync(
-        `INSERT INTO daily_logs (date, calories_consumed, target_calories, notes, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?);`,
+        `INSERT INTO daily_logs (user_id, date, calories_consumed, target_calories, notes, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?);`,
+        userId || null,
         date,
         calories,
         targetCalories,
@@ -46,6 +49,7 @@ export class DailyLogRepository {
       );
       return {
         id: res.lastInsertRowId,
+        user_id: userId,
         date,
         calories_consumed: calories,
         target_calories: targetCalories,

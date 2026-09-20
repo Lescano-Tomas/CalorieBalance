@@ -38,19 +38,41 @@ export async function seedDemoData(db: SQLite.SQLiteDatabase): Promise<void> {
     );
 
     await db.runAsync(
-      `INSERT INTO meal_entries (daily_log_id, title, calories, time, created_at)
-       VALUES (?, ?, ?, '14:30', ?);`,
+      `INSERT INTO meal_entries (daily_log_id, title, calories, time, created_at, updated_at)
+       VALUES (?, ?, ?, '14:30', ?, ?);`,
       res.lastInsertRowId,
       'Menú nutritivo & colación liviana',
       Math.round(sample.calories * 0.6),
+      nowIso,
       nowIso
     );
   }
 
+  // Seed default active profile if table is empty
+  const profileRow = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM user_profiles;'
+  );
+  if (!profileRow || profileRow.count === 0) {
+    const nowIso = new Date().toISOString();
+    await db.runAsync(
+      `INSERT INTO user_profiles (
+        name, gender, age, weight_kg, height_cm, activity_level, goal_type,
+        bmr, tdee, target_calories, is_active, created_at, updated_at
+      ) VALUES ('Valen', 'female', 26, 62, 165, 'moderate', 'deficit_moderate', 1370, 2124, 1824, 1, ?, ?);`,
+      nowIso,
+      nowIso
+    );
+  }
+
+  const nowIso = new Date().toISOString();
   await db.runAsync(
-    `INSERT OR IGNORE INTO user_settings (key, value) VALUES ('target_calories', '1800');`
+    `INSERT OR IGNORE INTO user_settings (key, value, created_at, updated_at) VALUES ('target_calories', '1800', ?, ?);`,
+    nowIso,
+    nowIso
   );
   await db.runAsync(
-    `INSERT OR IGNORE INTO user_settings (key, value) VALUES ('max_reference_calories', '2400');`
+    `INSERT OR IGNORE INTO user_settings (key, value, created_at, updated_at) VALUES ('max_reference_calories', '2400', ?, ?);`,
+    nowIso,
+    nowIso
   );
 }

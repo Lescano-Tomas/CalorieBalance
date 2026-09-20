@@ -3,34 +3,44 @@ import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Header, BottomNav } from '@/frontend/components/common';
+import { OnboardingModal } from '@/frontend/components/onboarding';
 import { DailyLogScreen } from '@/frontend/screens/daily-log/DailyLogScreen';
 import { HistoryScreen } from '@/frontend/screens/history/HistoryScreen';
 import { ChartsScreen } from '@/frontend/screens/charts/ChartsScreen';
 import { colors } from '@/frontend/theme';
-import { ScreenType } from '@/types';
+import { ScreenType, UserProfile } from '@/types';
 import { getDatabase } from '@/data/local/db';
-import { DailyLogRepository } from '@/data/repositories';
+import { DailyLogRepository, UserProfileRepository } from '@/data/repositories';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('daily');
   const [dbReady, setDbReady] = useState<boolean>(false);
   const [isTodayInDeficit, setIsTodayInDeficit] = useState<boolean>(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
 
   useEffect(() => {
     async function setup() {
       try {
         await getDatabase();
-        await checkTodayStatus();
+        const profile = await UserProfileRepository.getActiveProfile();
+        if (profile) {
+          setUserProfile(profile);
+        } else {
+          // No profile configured yet, trigger onboarding wizard
+          setShowOnboarding(true);
+        }
+        await checkTodayStatus(profile?.target_calories || 1800);
         setDbReady(true);
       } catch (err) {
-        console.error('Failed to initialize database:', err);
+        console.error('Failed to initialize database or profile:', err);
         setDbReady(true);
       }
     }
     setup();
   }, []);
 
-  const checkTodayStatus = async () => {
+  const checkTodayStatus = async (targetCal: number = 1800) => {
     try {
       const now = new Date();
       const year = now.getFullYear();
@@ -39,7 +49,7 @@ export default function App() {
       const todayStr = `${year}-${month}-${day}`;
       const log = await DailyLogRepository.getByDate(todayStr);
       if (log) {
-        setIsTodayInDeficit(log.calories_consumed <= log.target_calories);
+        setIsTodayInDeficit(log.calories_consumed <= (log.target_calories || targetCal));
       } else {
         setIsTodayInDeficit(true);
       }
@@ -48,10 +58,16 @@ export default function App() {
     }
   };
 
+  const handleProfileCompleted = async (newProfile: UserProfile) => {
+    setUserProfile(newProfile);
+    setShowOnboarding(false);
+    await checkTodayStatus(newProfile.target_calories);
+  };
+
   const getSubtitle = () => {
     switch (currentScreen) {
       case 'daily':
-        return 'Carga Diaria';
+        return userProfile?.name ? `Hola, ${userProfile.name}` : 'Carga Diaria';
       case 'charts':
         return 'Gráficos';
       case 'history':
@@ -74,17 +90,26 @@ export default function App() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <StatusBar style="dark" />
         
-        {/* Top Header with Transversal Badge */}
-        <Header subtitle={getSubtitle()} isDeficit={isTodayInDeficit} />
+        {/* Top Header with Transversal Badge and Profile Trigger */}
+        <Header
+          subtitle={getSubtitle()}
+          isDeficit={isTodayInDeficit}
+          onPressProfile={() => setShowOnboarding(true)}
+        />
 
         {/* Main Screen Content */}
         <View style={styles.mainContainer}>
           {currentScreen === 'daily' && (
-            <DailyLogScreen onDataChanged={checkTodayStatus} />
+            <DailyLogScreen
+              onDataChanged={() => checkTodayStatus(userProfile?.target_calories || 1800)}
+              userProfile={userProfile}
+            />
           )}
           {currentScreen === 'charts' && <ChartsScreen />}
           {currentScreen === 'history' && (
-            <HistoryScreen onDataChanged={checkTodayStatus} />
+            <HistoryScreen
+              onDataChanged={() => checkTodayStatus(userProfile?.target_calories || 1800)}
+            />
           )}
         </View>
 
@@ -92,6 +117,14 @@ export default function App() {
         <BottomNav
           currentScreen={currentScreen}
           onSelectScreen={setCurrentScreen}
+        />
+
+        {/* Onboarding / Profile Recalculation Modal */}
+        <OnboardingModal
+          visible={showOnboarding}
+          onClose={userProfile ? () => setShowOnboarding(false) : undefined}
+          onCompleted={handleProfileCompleted}
+          initialProfile={userProfile}
         />
       </SafeAreaView>
     </SafeAreaProvider>

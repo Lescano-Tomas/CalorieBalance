@@ -20,10 +20,15 @@ export class SettingsRepository {
 
   static async setSetting(key: string, value: string): Promise<void> {
     const db = await getDatabase();
+    const nowIso = new Date().toISOString();
     await db.runAsync(
-      `INSERT OR REPLACE INTO user_settings (key, value) VALUES (?, ?);`,
+      `INSERT INTO user_settings (key, value, created_at, updated_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at;`,
       key,
-      value
+      value,
+      nowIso,
+      nowIso
     );
   }
 }
