@@ -159,6 +159,53 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({
     }
   };
 
+  const handleAddBatchMeals = async (
+    items: Array<{ title: string; calories: number; quantity?: string }>
+  ) => {
+    if (!items || items.length === 0) return;
+    try {
+      let currentLogId = dailyLogId;
+      const batchCalories = items.reduce((sum, item) => sum + item.calories, 0);
+      const newTotal = calories + batchCalories;
+
+      if (!currentLogId) {
+        const savedLog = await DailyLogRepository.saveLog(
+          currentDateStr,
+          newTotal,
+          targetCalories,
+          undefined,
+          userProfile?.id
+        );
+        currentLogId = savedLog.id;
+        setDailyLogId(savedLog.id);
+      } else {
+        await DailyLogRepository.saveLog(
+          currentDateStr,
+          newTotal,
+          targetCalories,
+          undefined,
+          userProfile?.id
+        );
+      }
+
+      const newEntries = await MealEntryRepository.addBatchMeals(
+        currentLogId,
+        items
+      );
+
+      setMeals((prev) => [...prev, ...newEntries]);
+      setCalories(newTotal);
+      setToastMessage(
+        `¡Agregadas ${items.length} comidas! (+${batchCalories.toLocaleString()} kcal)`
+      );
+      setToastVisible(true);
+      if (onDataChanged) onDataChanged();
+    } catch (err: any) {
+      Alert.alert('Error', 'No se pudieron registrar las comidas: ' + err?.message);
+      throw err;
+    }
+  };
+
   const handleDeleteMeal = async (id: number) => {
     try {
       const mealToDelete = meals.find((m) => m.id === id);
@@ -377,6 +424,7 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({
               meals={meals}
               loading={mealsLoading}
               onAddMeal={handleAddMeal}
+              onAddBatchMeals={handleAddBatchMeals}
               onDeleteMeal={handleDeleteMeal}
             />
 

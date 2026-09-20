@@ -42,6 +42,41 @@ export class MealEntryRepository {
     };
   }
 
+  static async addBatchMeals(
+    dailyLogId: number,
+    meals: Array<{ title: string; calories: number; quantity?: string; time?: string }>
+  ): Promise<MealEntry[]> {
+    const db = await getDatabase();
+    const nowIso = new Date().toISOString();
+    const results: MealEntry[] = [];
+
+    for (const meal of meals) {
+      const res = await db.runAsync(
+        `INSERT INTO meal_entries (daily_log_id, title, calories, quantity, time, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?);`,
+        dailyLogId,
+        meal.title,
+        meal.calories,
+        meal.quantity || null,
+        meal.time || null,
+        nowIso,
+        nowIso
+      );
+      results.push({
+        id: res.lastInsertRowId,
+        daily_log_id: dailyLogId,
+        title: meal.title,
+        calories: meal.calories,
+        quantity: meal.quantity || undefined,
+        time: meal.time,
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
+    }
+
+    return results;
+  }
+
   static async deleteMeal(id: number): Promise<void> {
     const db = await getDatabase();
     await db.runAsync('DELETE FROM meal_entries WHERE id = ?;', id);

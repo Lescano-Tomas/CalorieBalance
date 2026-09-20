@@ -18,6 +18,15 @@ export class SettingsRepository {
     };
   }
 
+  static async getSetting(key: string): Promise<string | null> {
+    const db = await getDatabase();
+    const row = await db.getFirstAsync<{ value: string }>(
+      'SELECT value FROM user_settings WHERE key = ?;',
+      key
+    );
+    return row?.value || null;
+  }
+
   static async setSetting(key: string, value: string): Promise<void> {
     const db = await getDatabase();
     const nowIso = new Date().toISOString();
@@ -30,5 +39,13 @@ export class SettingsRepository {
       nowIso,
       nowIso
     );
+  }
+
+  static async getGeminiApiKey(): Promise<string | null> {
+    return await this.getSetting('gemini_api_key');
+  }
+
+  static async setGeminiApiKey(apiKey: string): Promise<void> {
+    await this.setSetting('gemini_api_key', apiKey.trim());
   }
 }

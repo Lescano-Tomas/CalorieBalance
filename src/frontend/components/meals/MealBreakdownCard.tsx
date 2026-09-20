@@ -17,11 +17,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing } from '@/frontend/theme';
 import { Card } from '@/frontend/components/ui';
 import { MealEntry } from '@/types';
+import { AIEstimatorModal } from './AIEstimatorModal';
 
 interface MealBreakdownCardProps {
   meals: MealEntry[];
   loading?: boolean;
   onAddMeal: (title: string, calories: number, quantity?: string) => Promise<void>;
+  onAddBatchMeals?: (items: Array<{ title: string; calories: number; quantity?: string }>) => Promise<void>;
   onDeleteMeal: (id: number) => Promise<void>;
 }
 
@@ -29,10 +31,12 @@ export const MealBreakdownCard: React.FC<MealBreakdownCardProps> = ({
   meals,
   loading = false,
   onAddMeal,
+  onAddBatchMeals,
   onDeleteMeal,
 }) => {
   const [expanded, setExpanded] = useState<boolean>(true);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [showAIModal, setShowAIModal] = useState<boolean>(false);
   const [title, setTitle] = useState<string>('');
   const [quantity, setQuantity] = useState<string>('');
   const [caloriesStr, setCaloriesStr] = useState<string>('');
@@ -40,6 +44,18 @@ export const MealBreakdownCard: React.FC<MealBreakdownCardProps> = ({
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const totalMealCalories = meals.reduce((sum, m) => sum + (m.calories || 0), 0);
+
+  const handleBatchFromAI = async (
+    items: Array<{ title: string; calories: number; quantity?: string }>
+  ) => {
+    if (onAddBatchMeals) {
+      await onAddBatchMeals(items);
+    } else {
+      for (const item of items) {
+        await onAddMeal(item.title, item.calories, item.quantity);
+      }
+    }
+  };
 
   const handleAddSubmit = async () => {
     if (!title.trim()) {
@@ -178,15 +194,26 @@ export const MealBreakdownCard: React.FC<MealBreakdownCardProps> = ({
                 </View>
               )}
 
-              {/* Add Meal Trigger Button */}
-              <TouchableOpacity
-                style={styles.addTriggerButton}
-                onPress={() => setShowAddModal(true)}
-                activeOpacity={0.7}
-              >
-                <MaterialIcons name="add-circle-outline" size={18} color={colors.primary} />
-                <Text style={styles.addTriggerText}>Agregar comida / ingrediente</Text>
-              </TouchableOpacity>
+              {/* Action Buttons: AI Estimation + Manual Add */}
+              <View style={styles.actionButtonsRow}>
+                <TouchableOpacity
+                  style={styles.aiTriggerButton}
+                  onPress={() => setShowAIModal(true)}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons name="auto-awesome" size={16} color={colors.onPrimary} />
+                  <Text style={styles.aiTriggerText}>✨ Estimar con IA</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.addTriggerButton}
+                  onPress={() => setShowAddModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <MaterialIcons name="add" size={17} color={colors.primary} />
+                  <Text style={styles.addTriggerText}>Manual</Text>
+                </TouchableOpacity>
+              </View>
             </>
           )}
         </View>
@@ -298,6 +325,13 @@ export const MealBreakdownCard: React.FC<MealBreakdownCardProps> = ({
           </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Modal for Calibrated AI Estimation */}
+      <AIEstimatorModal
+        visible={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        onConfirmBatch={handleBatchFromAI}
+      />
     </Card>
   );
 };
@@ -432,17 +466,43 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.surfaceContainerHighest,
   },
-  addTriggerButton: {
+  actionButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: spacing.xs,
+  },
+  aiTriggerButton: {
+    flex: 1.25,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 10,
     borderRadius: spacing.radius.md,
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  aiTriggerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.onPrimary,
+  },
+  addTriggerButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 10,
+    borderRadius: spacing.radius.md,
     backgroundColor: colors.surfaceContainerLow,
     borderWidth: 1,
     borderColor: colors.surfaceContainerHighest,
-    marginTop: spacing.xs,
   },
   addTriggerText: {
     fontSize: 13,
