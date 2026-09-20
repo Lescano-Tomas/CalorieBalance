@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '../theme/colors';
+import { colors, spacing } from '@/frontend/theme';
+import { CalorieCalculator } from '@/backend/calculations/calorieCalculator';
 
 interface BentoSummaryProps {
   target: number;
@@ -11,9 +12,7 @@ export const BentoSummary: React.FC<BentoSummaryProps> = ({
   target = 1800,
   consumed,
 }) => {
-  const diff = consumed - target;
-  const isDeficit = diff <= 0;
-  const absDiff = Math.abs(diff);
+  const { diff, isDeficit, absDiff } = CalorieCalculator.calculateDeficit(consumed, target);
 
   return (
     <View style={styles.container}>
@@ -63,8 +62,8 @@ export const BentoSummary: React.FC<BentoSummaryProps> = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.surfaceContainerLow,
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: spacing.radius.lg,
+    padding: spacing.md,
     marginVertical: 10,
   },
   title: {
@@ -76,14 +75,14 @@ const styles = StyleSheet.create({
   },
   grid: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
   card: {
     flex: 1,
     backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 14,
+    borderRadius: spacing.radius.sm,
     paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

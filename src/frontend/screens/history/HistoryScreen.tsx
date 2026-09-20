@@ -9,11 +9,13 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
-import { Toast } from '../components/Toast';
-import { DailyLogRepository } from '../database/repository';
-import { AIService } from '../services/aiService';
-import { DailyLog } from '../types';
+import { colors, spacing } from '@/frontend/theme';
+import { Card, Button, StatusBadge } from '@/frontend/components/ui';
+import { Toast } from '@/frontend/components/common';
+import { DailyLogRepository } from '@/data/repositories';
+import { AIService } from '@/backend/ai/aiService';
+import { CalorieCalculator } from '@/backend/calculations/calorieCalculator';
+import { DailyLog } from '@/types';
 
 interface HistoryScreenProps {
   onDataChanged?: () => void;
@@ -28,7 +30,6 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onDataChanged }) =
   const [toastMessage, setToastMessage] = useState<string>('');
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date());
 
-  // Generate past 7 days for the horizontal chips
   const generatePastDays = () => {
     const days = [];
     const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -129,7 +130,6 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onDataChanged }) =
   ];
   const monthDisplay = `${monthNames[currentMonthDate.getMonth()]} ${currentMonthDate.getFullYear()}`;
 
-  // Filter logs for the active month view
   const filteredLogs = logs.filter((log) => {
     const logDate = new Date(log.date);
     return (
@@ -138,13 +138,10 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onDataChanged }) =
     );
   });
 
-  const totalLogs = logs.length;
-  const deficitLogs = logs.filter((l) => l.calories_consumed <= l.target_calories).length;
-  const deficitPercentage = totalLogs > 0 ? Math.round((deficitLogs / totalLogs) * 100) : 100;
-
+  const periodMetrics = CalorieCalculator.calculatePeriodMetrics(logs, 1800);
   const currentCalNum = parseInt(retroCalories, 10) || 0;
-  const retroDiff = currentCalNum - 1800;
-  const isRetroDeficit = retroDiff <= 0;
+  const { isDeficit: isRetroDeficit, absDiff: retroAbsDiff, diff: retroDiff } =
+    CalorieCalculator.calculateDeficit(currentCalNum, 1800);
 
   return (
     <View style={styles.screenWrapper}>
@@ -163,7 +160,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onDataChanged }) =
         </View>
 
         {/* Collapsible Module: Registrar Día Pasado */}
-        <View style={styles.accordionCard}>
+        <Card style={styles.accordionCard}>
           <TouchableOpacity
             style={styles.accordionHeader}
             onPress={() => setIsAccordionOpen(!isAccordionOpen)}
@@ -294,39 +291,37 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onDataChanged }) =
                   ]}
                 >
                   {isRetroDeficit
-                    ? `-${Math.abs(retroDiff)} kcal déficit`
+                    ? `-${retroAbsDiff} kcal déficit`
                     : `+${retroDiff} kcal superávit`}
                 </Text>
               </View>
 
-              {/* Save Button */}
-              <TouchableOpacity
-                style={styles.retroSaveButton}
+              {/* Standardized Button */}
+              <Button
+                label="Guardar Día Pasado"
+                icon="save"
+                variant="tonal"
                 onPress={handleSaveRetro}
-                activeOpacity={0.85}
-              >
-                <MaterialIcons name="save" size={18} color={colors.onSurface} />
-                <Text style={styles.retroSaveButtonText}>Guardar Día Pasado</Text>
-              </TouchableOpacity>
+              />
             </View>
           )}
-        </View>
+        </Card>
 
         {/* Visual Accent: Monthly Balance Card */}
-        <View style={styles.rhythmCard}>
+        <Card style={styles.rhythmCard}>
           <View style={styles.rhythmInfo}>
             <Text style={styles.rhythmTag}>RITMO DE AUDITORÍA</Text>
             <Text style={styles.rhythmTitle}>
-              {deficitLogs} de {totalLogs} días en déficit
+              {periodMetrics.deficitDaysCount} de {periodMetrics.totalDays} días en déficit
             </Text>
             <Text style={styles.rhythmSub}>
-              {deficitPercentage}% de tus días registrados en balance consciente
+              {periodMetrics.deficitPercentage}% de tus días registrados en balance consciente
             </Text>
           </View>
           <View style={styles.rhythmIconBox}>
             <MaterialIcons name="eco" size={28} color={colors.secondary} />
           </View>
-        </View>
+        </Card>
 
         {/* Historial Completo */}
         <View style={styles.historySection}>
@@ -365,7 +360,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onDataChanged }) =
               const diffVal = item.calories_consumed - item.target_calories;
               const inDeficit = diffVal <= 0;
               return (
-                <View key={item.id} style={styles.logCard}>
+                <Card key={item.id} variant="flat" style={styles.logCard}>
                   <View style={styles.logLeft}>
                     <Text style={styles.logDate}>{item.date}</Text>
                     <Text style={styles.logCalories}>
@@ -374,31 +369,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onDataChanged }) =
                   </View>
 
                   <View style={styles.logRight}>
-                    <View
-                      style={[
-                        styles.logBadge,
-                        {
-                          backgroundColor: inDeficit
-                            ? colors.secondaryContainer
-                            : colors.tertiaryContainer,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.logBadgeText,
-                          {
-                            color: inDeficit
-                              ? colors.onSecondaryContainer
-                              : colors.onTertiaryContainer,
-                          },
-                        ]}
-                      >
-                        {inDeficit
-                          ? `-${Math.abs(diffVal)} kcal`
-                          : `+${diffVal} kcal`}
-                      </Text>
-                    </View>
+                    <StatusBadge isDeficit={inDeficit} diff={diffVal} compact />
 
                     <TouchableOpacity
                       onPress={() => handleDelete(item.id, item.date)}
@@ -407,7 +378,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onDataChanged }) =
                       <MaterialIcons name="delete-outline" size={20} color={colors.error} />
                     </TouchableOpacity>
                   </View>
-                </View>
+                </Card>
               );
             })
           )}
@@ -429,15 +400,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: 110,
     maxWidth: 540,
     marginHorizontal: 'auto',
     width: '100%',
   },
   headerSection: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -447,8 +418,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 20,
-    marginBottom: 8,
+    borderRadius: spacing.radius.pill,
+    marginBottom: spacing.sm,
   },
   badgeText: {
     fontSize: 10,
@@ -468,21 +439,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   accordionCard: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 24,
-    overflow: 'hidden',
-    shadowColor: '#665576',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 2,
-    marginBottom: 16,
+    padding: 0,
+    marginBottom: spacing.md,
   },
   accordionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: spacing.md,
   },
   accordionHeaderLeft: {
     flexDirection: 'row',
@@ -516,18 +480,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   accordionBody: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
   fieldLabel: {
     fontSize: 12,
     fontWeight: '600',
     color: colors.onSurfaceVariant,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   chipsScroll: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
     paddingVertical: 4,
     marginBottom: 14,
   },
@@ -535,7 +499,7 @@ const styles = StyleSheet.create({
     minWidth: 62,
     paddingVertical: 8,
     paddingHorizontal: 6,
-    borderRadius: 16,
+    borderRadius: spacing.radius.md,
     backgroundColor: colors.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
@@ -584,7 +548,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     backgroundColor: colors.surfaceContainerLow,
-    borderRadius: 24,
+    borderRadius: spacing.radius.pill,
     paddingLeft: 42,
     paddingRight: 110,
     fontSize: 16,
@@ -597,7 +561,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFixed,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: 20,
+    borderRadius: spacing.radius.pill,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -612,7 +576,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 10,
-    borderRadius: 14,
+    borderRadius: spacing.radius.md,
     marginBottom: 14,
   },
   previewLeft: {
@@ -629,28 +593,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  retroSaveButton: {
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.surfaceContainerHigh,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  retroSaveButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.onSurface,
-  },
   rhythmCard: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 20,
-    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: spacing.md,
     borderLeftWidth: 4,
     borderLeftColor: colors.secondary,
   },
@@ -692,7 +639,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
   },
   historyHeading: {
     fontSize: 18,
@@ -708,7 +655,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surfaceContainerLowest,
     padding: 4,
-    borderRadius: 20,
+    borderRadius: spacing.radius.pill,
   },
   monthNavBtn: {
     width: 30,
@@ -721,7 +668,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.onSurface,
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
   },
   emptyState: {
     padding: 24,
@@ -732,18 +679,11 @@ const styles = StyleSheet.create({
     color: colors.onSurfaceVariant,
   },
   logCard: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 16,
-    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
+    padding: 14,
+    marginBottom: spacing.sm,
   },
   logLeft: {
     flexDirection: 'column',
@@ -763,15 +703,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-  },
-  logBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-  },
-  logBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
   },
   deleteBtn: {
     padding: 4,

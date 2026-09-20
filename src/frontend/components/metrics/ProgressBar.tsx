@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '../theme/colors';
+import { colors } from '@/frontend/theme';
+import { CalorieCalculator } from '@/backend/calculations/calorieCalculator';
 
 interface ProgressBarProps {
   consumed: number;
@@ -13,9 +14,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   target = 1800,
   maxReference = 2400,
 }) => {
-  const percent = Math.min(Math.max((consumed / maxReference) * 100, 2), 100);
+  const { percentOfReference, isDeficit } = CalorieCalculator.calculateDeficit(
+    consumed,
+    target,
+    maxReference
+  );
   const targetPercent = (target / maxReference) * 100;
-  const isDeficit = consumed <= target;
 
   return (
     <View style={styles.container}>
@@ -28,12 +32,11 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       </View>
 
       <View style={styles.track}>
-        {/* Progress fill */}
         <View
           style={[
             styles.fill,
             {
-              width: `${percent}%`,
+              width: `${percentOfReference}%`,
               backgroundColor: isDeficit
                 ? colors.secondary
                 : colors.tertiaryContainer,
@@ -41,7 +44,6 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           ]}
         />
 
-        {/* Target line indicator */}
         <View
           style={[
             styles.targetMarker,

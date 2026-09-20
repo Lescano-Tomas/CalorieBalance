@@ -1,0 +1,34 @@
+import * as SQLite from 'expo-sqlite';
+import {
+  DDL_PRAGMAS,
+  DDL_DAILY_LOGS,
+  DDL_MEAL_ENTRIES,
+  DDL_USER_SETTINGS,
+} from '../schemas/tables';
+import { seedDemoData } from '../seeds/seedData';
+
+let dbInstance: SQLite.SQLiteDatabase | null = null;
+
+export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
+  if (dbInstance) {
+    return dbInstance;
+  }
+  dbInstance = await SQLite.openDatabaseAsync('calorie_balance.db');
+  await initDatabase(dbInstance);
+  return dbInstance;
+}
+
+export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
+  await db.execAsync(DDL_PRAGMAS);
+  await db.execAsync(DDL_DAILY_LOGS);
+  await db.execAsync(DDL_MEAL_ENTRIES);
+  await db.execAsync(DDL_USER_SETTINGS);
+
+  const countRow = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM daily_logs;'
+  );
+
+  if (!countRow || countRow.count === 0) {
+    await seedDemoData(db);
+  }
+}

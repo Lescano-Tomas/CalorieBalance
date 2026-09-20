@@ -1,0 +1,34 @@
+export const DDL_PRAGMAS = `
+  PRAGMA foreign_keys = ON;
+`;
+
+export const DDL_DAILY_LOGS = `
+  CREATE TABLE IF NOT EXISTS daily_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL UNIQUE,
+    calories_consumed INTEGER NOT NULL DEFAULT 0,
+    target_calories INTEGER NOT NULL DEFAULT 1800,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`;
+
+export const DDL_MEAL_ENTRIES = `
+  CREATE TABLE IF NOT EXISTS meal_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    daily_log_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    calories INTEGER NOT NULL,
+    time TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (daily_log_id) REFERENCES daily_logs(id) ON DELETE CASCADE
+  );
+`;
+
+export const DDL_USER_SETTINGS = `
+  CREATE TABLE IF NOT EXISTS user_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+`;

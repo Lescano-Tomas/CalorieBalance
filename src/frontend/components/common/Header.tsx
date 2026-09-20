@@ -1,7 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { colors, spacing } from '@/frontend/theme';
+import { StatusBadge } from '../ui/StatusBadge';
 
 interface HeaderProps {
   subtitle: string;
@@ -22,29 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ subtitle, isDeficit = true }) =>
       </View>
 
       <View style={styles.rightSection}>
-        <View
-          style={[
-            styles.balanceBadge,
-            {
-              backgroundColor: isDeficit
-                ? colors.secondaryContainer
-                : colors.tertiaryContainer,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.balanceBadgeText,
-              {
-                color: isDeficit
-                  ? colors.onSecondaryContainer
-                  : colors.onTertiaryContainer,
-              },
-            ]}
-          >
-            {isDeficit ? 'En balance' : 'Superávit'}
-          </Text>
-        </View>
+        <StatusBadge isDeficit={isDeficit} text={isDeficit ? 'En balance' : 'Superávit'} />
 
         <TouchableOpacity style={styles.avatarButton} activeOpacity={0.8}>
           <MaterialIcons name="person" size={18} color={colors.onPrimary} />
@@ -57,7 +36,7 @@ export const Header: React.FC<HeaderProps> = ({ subtitle, isDeficit = true }) =>
 const styles = StyleSheet.create({
   headerContainer: {
     height: 60,
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -68,7 +47,7 @@ const styles = StyleSheet.create({
   leftSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.sm,
   },
   logoCircle: {
     width: 38,
@@ -95,16 +74,7 @@ const styles = StyleSheet.create({
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  balanceBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-  balanceBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
+    gap: spacing.sm,
   },
   avatarButton: {
     width: 34,

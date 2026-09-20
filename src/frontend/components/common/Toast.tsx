@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, Animated, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { colors, spacing } from '@/frontend/theme';
 
 interface ToastProps {
   visible: boolean;
@@ -73,8 +73,8 @@ const styles = StyleSheet.create({
   toastContainer: {
     position: 'absolute',
     bottom: 90,
-    left: 20,
-    right: 20,
+    left: spacing.lg,
+    right: spacing.lg,
     alignItems: 'center',
     zIndex: 999,
   },
@@ -84,8 +84,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#2e312d',
     paddingHorizontal: 18,
     paddingVertical: 12,
-    borderRadius: 30,
-    gap: 8,
+    borderRadius: spacing.radius.pill,
+    gap: spacing.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,

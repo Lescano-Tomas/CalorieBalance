@@ -10,12 +10,13 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
-import { BentoSummary } from '../components/BentoSummary';
-import { ProgressBar } from '../components/ProgressBar';
-import { Toast } from '../components/Toast';
-import { DailyLogRepository } from '../database/repository';
-import { AIService } from '../services/aiService';
+import { colors, spacing } from '@/frontend/theme';
+import { Card, Button, StatusBadge } from '@/frontend/components/ui';
+import { BentoSummary, ProgressBar } from '@/frontend/components/metrics';
+import { Toast } from '@/frontend/components/common';
+import { DailyLogRepository } from '@/data/repositories';
+import { AIService } from '@/backend/ai/aiService';
+import { CalorieCalculator } from '@/backend/calculations/calorieCalculator';
 
 interface DailyLogScreenProps {
   onDataChanged?: () => void;
@@ -26,13 +27,13 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
   const [calories, setCalories] = useState<number>(1650);
   const [notes, setNotes] = useState<string>('Menú nutritivo & colación liviana');
   const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
   const [toastVisible, setToastVisible] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string>('');
 
   const targetCalories = 1800;
   const maxReference = 2400;
 
-  // Helper to format date string YYYY-MM-DD
   const getDateString = (day: 'today' | 'yesterday') => {
     const d = new Date();
     if (day === 'yesterday') {
@@ -46,7 +47,6 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
 
   const currentDateStr = getDateString(selectedDay);
 
-  // Load record from SQLite when selectedDay changes
   useEffect(() => {
     loadLogForDay(selectedDay);
   }, [selectedDay]);
@@ -60,7 +60,6 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
         setCalories(record.calories_consumed);
         if (record.notes) setNotes(record.notes);
       } else {
-        // Defaults
         setCalories(day === 'today' ? 1650 : 1720);
       }
     } catch (err) {
@@ -75,6 +74,7 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
   };
 
   const handleSave = async () => {
+    setSaving(true);
     try {
       await DailyLogRepository.saveLog(
         currentDateStr,
@@ -91,12 +91,16 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
       if (onDataChanged) onDataChanged();
     } catch (err: any) {
       Alert.alert('Error', 'No se pudo guardar el registro: ' + err?.message);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const diff = calories - targetCalories;
-  const isDeficit = diff <= 0;
-  const absDiff = Math.abs(diff);
+  const { isDeficit, absDiff } = CalorieCalculator.calculateDeficit(
+    calories,
+    targetCalories,
+    maxReference
+  );
   const mindfulTip = AIService.getTipForCalories(calories, targetCalories);
 
   return (
@@ -144,7 +148,7 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
           </TouchableOpacity>
         </View>
 
-        {/* Section Title */}
+        {/* Section Header */}
         <View style={styles.titleSection}>
           <View style={styles.titleRow}>
             <Text style={styles.mainHeading}>Registro Diario</Text>
@@ -165,7 +169,7 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
         ) : (
           <>
             {/* Hero Card */}
-            <View style={styles.heroCard}>
+            <Card style={styles.heroCard}>
               <View style={styles.heroTopRow}>
                 <Text style={styles.heroLabel}>TOTAL CONSUMIDO</Text>
                 <View style={styles.syncTag}>
@@ -241,29 +245,12 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
                       : `Superávit (+${absDiff} kcal sobre umbral)`}
                   </Text>
                 </View>
-                <View
-                  style={[
-                    styles.goalBadge,
-                    {
-                      backgroundColor: isDeficit
-                        ? colors.secondaryFixed
-                        : colors.tertiaryContainer,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.goalBadgeText,
-                      {
-                        color: isDeficit
-                          ? colors.onSecondaryFixed
-                          : colors.onTertiaryContainer,
-                      },
-                    ]}
-                  >
-                    {isDeficit ? 'Meta Lograda' : 'Sobre Meta'}
-                  </Text>
-                </View>
+
+                <StatusBadge
+                  isDeficit={isDeficit}
+                  text={isDeficit ? 'Meta Lograda' : 'Sobre Meta'}
+                  compact
+                />
               </View>
 
               {/* Progress Bar */}
@@ -272,10 +259,10 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
                 target={targetCalories}
                 maxReference={maxReference}
               />
-            </View>
+            </Card>
 
             {/* Companion Meal Card */}
-            <View style={styles.mealCard}>
+            <Card variant="flat" style={styles.mealCard}>
               <View style={styles.mealImagePlaceholder}>
                 <MaterialIcons name="restaurant" size={28} color={colors.primary} />
               </View>
@@ -289,7 +276,7 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
                 </Text>
                 <Text style={styles.mealSub}>Cálculo de porciones procesado por IA</Text>
               </View>
-            </View>
+            </Card>
 
             {/* Daily Summary Bento */}
             <BentoSummary target={targetCalories} consumed={calories} />
@@ -308,19 +295,18 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
               </View>
             </View>
 
-            {/* Action Save Button */}
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={handleSave}
-              activeOpacity={0.85}
-            >
-              <MaterialIcons name="cloud-done" size={20} color={colors.onPrimary} />
-              <Text style={styles.saveButtonText}>
-                {selectedDay === 'today'
+            {/* Standardized Primary Action Button */}
+            <Button
+              label={
+                selectedDay === 'today'
                   ? 'Guardar Registro de Hoy'
-                  : 'Guardar Registro de Ayer'}
-              </Text>
-            </TouchableOpacity>
+                  : 'Guardar Registro de Ayer'
+              }
+              icon="cloud-done"
+              onPress={handleSave}
+              loading={saving}
+              style={styles.saveBtn}
+            />
           </>
         )}
       </ScrollView>
@@ -341,8 +327,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: 110,
     maxWidth: 540,
     marginHorizontal: 'auto',
@@ -351,14 +337,14 @@ const styles = StyleSheet.create({
   daySelectorContainer: {
     flexDirection: 'row',
     backgroundColor: colors.surfaceContainerLow,
-    borderRadius: 30,
+    borderRadius: spacing.radius.pill,
     padding: 4,
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   dayTab: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 24,
+    borderRadius: spacing.radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -380,7 +366,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   titleSection: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   titleRow: {
     flexDirection: 'row',
@@ -400,7 +386,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFixed,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: spacing.radius.pill,
   },
   geminiBadgeText: {
     fontSize: 11,
@@ -417,14 +403,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroCard: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: '#665576',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    elevation: 2,
     marginBottom: 14,
   },
   heroTopRow: {
@@ -446,7 +424,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondaryFixed,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: spacing.radius.pill,
   },
   syncDot: {
     width: 6,
@@ -507,7 +485,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 30,
+    borderRadius: spacing.radius.pill,
     marginBottom: 10,
   },
   statusPillLeft: {
@@ -521,33 +499,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
-  goalBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  goalBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
   mealCard: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 20,
-    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    padding: 14,
     marginBottom: 12,
   },
   mealImagePlaceholder: {
     width: 54,
     height: 54,
-    borderRadius: 14,
+    borderRadius: spacing.radius.md,
     backgroundColor: colors.primaryFixed,
     alignItems: 'center',
     justifyContent: 'center',
@@ -582,7 +544,7 @@ const styles = StyleSheet.create({
   },
   tipCard: {
     backgroundColor: 'rgba(225, 227, 221, 0.6)',
-    borderRadius: 18,
+    borderRadius: spacing.radius.lg,
     padding: 14,
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -617,24 +579,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 2,
   },
-  saveButton: {
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+  saveBtn: {
     marginTop: 14,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  saveButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.onPrimary,
   },
 });

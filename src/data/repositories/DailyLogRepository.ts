@@ -1,5 +1,5 @@
-import { getDatabase } from './db';
-import { DailyLog, MealEntry, UserSettings } from '../types';
+import { getDatabase } from '../local/db';
+import { DailyLog } from '@/types';
 
 export class DailyLogRepository {
   static async getByDate(date: string): Promise<DailyLog | null> {
@@ -84,75 +84,6 @@ export class DailyLogRepository {
     return await db.getAllAsync<DailyLog>(
       'SELECT * FROM daily_logs WHERE date LIKE ? ORDER BY date ASC;',
       prefix
-    );
-  }
-}
-
-export class MealEntryRepository {
-  static async getByDailyLogId(dailyLogId: number): Promise<MealEntry[]> {
-    const db = await getDatabase();
-    return await db.getAllAsync<MealEntry>(
-      'SELECT * FROM meal_entries WHERE daily_log_id = ? ORDER BY id ASC;',
-      dailyLogId
-    );
-  }
-
-  static async addMeal(
-    dailyLogId: number,
-    title: string,
-    calories: number,
-    time?: string
-  ): Promise<MealEntry> {
-    const db = await getDatabase();
-    const nowIso = new Date().toISOString();
-    const res = await db.runAsync(
-      `INSERT INTO meal_entries (daily_log_id, title, calories, time, created_at)
-       VALUES (?, ?, ?, ?, ?);`,
-      dailyLogId,
-      title,
-      calories,
-      time || null,
-      nowIso
-    );
-    return {
-      id: res.lastInsertRowId,
-      daily_log_id: dailyLogId,
-      title,
-      calories,
-      time,
-      created_at: nowIso,
-    };
-  }
-
-  static async deleteMeal(id: number): Promise<void> {
-    const db = await getDatabase();
-    await db.runAsync('DELETE FROM meal_entries WHERE id = ?;', id);
-  }
-}
-
-export class SettingsRepository {
-  static async getSettings(): Promise<UserSettings> {
-    const db = await getDatabase();
-    const rows = await db.getAllAsync<{ key: string; value: string }>(
-      'SELECT key, value FROM user_settings;'
-    );
-    const map = new Map<string, string>();
-    for (const r of rows) {
-      map.set(r.key, r.value);
-    }
-    return {
-      targetCalories: parseInt(map.get('target_calories') || '1800', 10),
-      maxReferenceCalories: parseInt(map.get('max_reference_calories') || '2400', 10),
-      userName: map.get('user_name') || 'Usuario',
-    };
-  }
-
-  static async setSetting(key: string, value: string): Promise<void> {
-    const db = await getDatabase();
-    await db.runAsync(
-      `INSERT OR REPLACE INTO user_settings (key, value) VALUES (?, ?);`,
-      key,
-      value
     );
   }
 }

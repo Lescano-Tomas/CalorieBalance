@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
-import { ScreenType } from '../types';
+import { colors, spacing } from '@/frontend/theme';
+import { ScreenType } from '@/types';
 
 interface BottomNavProps {
   currentScreen: ScreenType;
@@ -64,8 +64,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(248, 250, 244, 0.95)',
     borderTopWidth: 1,
     borderTopColor: 'rgba(102, 85, 118, 0.08)',
-    paddingBottom: 16,
-    paddingTop: 8,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.sm,
   },
   navBar: {
     flexDirection: 'row',
@@ -74,14 +74,14 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     marginHorizontal: 'auto',
     width: '100%',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.md,
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 16,
+    paddingVertical: spacing.sm,
+    borderRadius: spacing.radius.md,
     gap: 3,
   },
   activeTabButton: {

@@ -1,16 +1,6 @@
-/**
- * Cloud Sync Service (Supabase Ready)
- * Provides a decoupled interface for migrating or syncing local SQLite data to Supabase PostgreSQL.
- */
-
-import { DailyLogRepository } from '../database/repository';
-import { DailyLog } from '../types';
-
-export interface CloudSyncResult {
-  success: boolean;
-  totalSynced: number;
-  message: string;
-}
+import { DailyLogRepository } from '@/data/repositories';
+import { DailyLog } from '@/types';
+import { CloudSyncResult } from './syncTypes';
 
 export class SyncService {
   private static supabaseUrl: string | null = null;
@@ -25,10 +15,6 @@ export class SyncService {
     return !!(this.supabaseUrl && this.supabaseAnonKey);
   }
 
-  /**
-   * Syncs local SQLite records with Supabase PostgreSQL table 'daily_logs'.
-   * When Supabase keys are provided, it performs upserts.
-   */
   public static async syncToCloud(): Promise<CloudSyncResult> {
     const localLogs = await DailyLogRepository.getAllLogs();
 
@@ -41,7 +27,6 @@ export class SyncService {
     }
 
     try {
-      // Direct REST API upsert to Supabase PostgREST endpoint
       const response = await fetch(`${this.supabaseUrl}/rest/v1/daily_logs`, {
         method: 'POST',
         headers: {

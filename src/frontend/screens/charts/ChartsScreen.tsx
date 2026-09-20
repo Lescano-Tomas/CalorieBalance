@@ -5,12 +5,13 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
-import { DailyLogRepository } from '../database/repository';
-import { DailyLog } from '../types';
+import { colors, spacing } from '@/frontend/theme';
+import { Card } from '@/frontend/components/ui';
+import { DailyLogRepository } from '@/data/repositories';
+import { CalorieCalculator } from '@/backend/calculations/calorieCalculator';
+import { DailyLog } from '@/types';
 
 interface ChartsScreenProps {
   onDataChanged?: () => void;
@@ -34,7 +35,6 @@ export const ChartsScreen: React.FC<ChartsScreenProps> = () => {
     }
   };
 
-  // Helper to get past 7 days logs
   const getWeekDays = () => {
     const days = [];
     const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -62,9 +62,8 @@ export const ChartsScreen: React.FC<ChartsScreenProps> = () => {
   };
 
   const weekData = getWeekDays();
-
-  // Find day with lowest calories (best deficit) among days that have logs
   const loggedDays = weekData.filter((d) => d.hasLog && d.calories > 0);
+
   let bestDayDate: string | null = null;
   if (loggedDays.length > 0) {
     const minCal = Math.min(...loggedDays.map((d) => d.calories));
@@ -72,12 +71,10 @@ export const ChartsScreen: React.FC<ChartsScreenProps> = () => {
     if (best) bestDayDate = best.dateStr;
   }
 
-  // Calculate average deficit
-  const totalCalories = loggedDays.reduce((sum, d) => sum + d.calories, 0);
-  const avgCalories = loggedDays.length > 0 ? Math.round(totalCalories / loggedDays.length) : 1800;
-  const avgDiff = avgCalories - 1800;
+  // Use CalorieCalculator for clean business logic
+  const matchedLogs = logs.filter((l) => weekData.some((w) => w.dateStr === l.date));
+  const metrics = CalorieCalculator.calculatePeriodMetrics(matchedLogs, 1800);
 
-  // Chart Y-axis parameters
   const chartMin = 1200;
   const chartMax = 2200;
   const chartRange = chartMax - chartMin;
@@ -101,12 +98,14 @@ export const ChartsScreen: React.FC<ChartsScreenProps> = () => {
           </View>
           <View style={styles.trendBadge}>
             <MaterialIcons
-              name={avgDiff <= 0 ? 'trending-down' : 'trending-up'}
+              name={metrics.averageDiff <= 0 ? 'trending-down' : 'trending-up'}
               size={16}
               color={colors.onSecondaryFixed}
             />
             <Text style={styles.trendBadgeText}>
-              {avgDiff <= 0 ? `${avgDiff} kcal prom.` : `+${avgDiff} kcal prom.`}
+              {metrics.averageDiff <= 0
+                ? `${metrics.averageDiff} kcal prom.`
+                : `+${metrics.averageDiff} kcal prom.`}
             </Text>
           </View>
         </View>
@@ -161,7 +160,7 @@ export const ChartsScreen: React.FC<ChartsScreenProps> = () => {
         </View>
 
         {/* Chart Container */}
-        <View style={styles.chartCard}>
+        <Card style={styles.chartCard}>
           {/* Target Reference Info */}
           <View style={styles.chartHeader}>
             <View style={styles.legendItem}>
@@ -176,7 +175,6 @@ export const ChartsScreen: React.FC<ChartsScreenProps> = () => {
 
           {/* Chart Canvas */}
           <View style={styles.canvasContainer}>
-            {/* Guide Lines & Y-ticks */}
             {[2200, 2000, 1800, 1600, 1400].map((tick) => {
               const bottomPercent = getYPercent(tick);
               const isTarget = tick === 1800;
@@ -223,7 +221,6 @@ export const ChartsScreen: React.FC<ChartsScreenProps> = () => {
                     onPress={() => setSelectedBar(isSelected ? null : d.dateStr)}
                     activeOpacity={0.8}
                   >
-                    {/* Tooltip / Star */}
                     <View style={styles.barTopArea}>
                       {isBest && (
                         <MaterialIcons
@@ -240,7 +237,6 @@ export const ChartsScreen: React.FC<ChartsScreenProps> = () => {
                       )}
                     </View>
 
-                    {/* Bar Pillar */}
                     <View style={styles.pillarWrapper}>
                       <View
                         style={[
@@ -260,7 +256,6 @@ export const ChartsScreen: React.FC<ChartsScreenProps> = () => {
                       />
                     </View>
 
-                    {/* Day Label */}
                     <Text
                       style={[
                         styles.barDayLabel,
@@ -274,25 +269,25 @@ export const ChartsScreen: React.FC<ChartsScreenProps> = () => {
               })}
             </View>
           </View>
-        </View>
+        </Card>
 
         {/* Weekly Insights Cards */}
         <View style={styles.insightsGrid}>
-          <View style={styles.insightCard}>
+          <Card style={styles.insightCard}>
             <Text style={styles.insightLabel}>PROMEDIO</Text>
-            <Text style={styles.insightVal}>{avgCalories} kcal</Text>
+            <Text style={styles.insightVal}>{metrics.averageCalories} kcal</Text>
             <Text style={styles.insightSub}>
-              {avgDiff <= 0 ? 'Ritmo sostenible' : 'Ligero exceso'}
+              {metrics.averageDiff <= 0 ? 'Ritmo sostenible' : 'Ligero exceso'}
             </Text>
-          </View>
+          </Card>
 
-          <View style={styles.insightCard}>
+          <Card style={styles.insightCard}>
             <Text style={styles.insightLabel}>DÍAS EN META</Text>
             <Text style={[styles.insightVal, { color: colors.secondary }]}>
-              {loggedDays.filter((d) => d.calories <= 1800).length} de {loggedDays.length}
+              {metrics.deficitDaysCount} de {metrics.totalDays}
             </Text>
             <Text style={styles.insightSub}>Semana actual</Text>
-          </View>
+          </Card>
         </View>
       </ScrollView>
     </View>
@@ -305,8 +300,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: 110,
     maxWidth: 540,
     marginHorizontal: 'auto',
@@ -316,7 +311,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   periodBadge: {
     fontSize: 10,
@@ -337,7 +332,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondaryFixed,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 20,
+    borderRadius: spacing.radius.pill,
   },
   trendBadgeText: {
     fontSize: 11,
@@ -347,14 +342,14 @@ const styles = StyleSheet.create({
   switcherContainer: {
     flexDirection: 'row',
     backgroundColor: colors.surfaceContainer,
-    borderRadius: 24,
+    borderRadius: spacing.radius.pill,
     padding: 4,
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   switcherTab: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: spacing.radius.pill,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -378,15 +373,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   chartCard: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 24,
     padding: 18,
-    shadowColor: '#665576',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 2,
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   chartHeader: {
     flexDirection: 'row',
@@ -526,14 +514,7 @@ const styles = StyleSheet.create({
   },
   insightCard: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 20,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    padding: spacing.md,
   },
   insightLabel: {
     fontSize: 10,

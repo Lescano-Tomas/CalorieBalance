@@ -2,22 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Header } from './src/components/Header';
-import { BottomNav } from './src/components/BottomNav';
-import { DailyLogScreen } from './src/screens/DailyLogScreen';
-import { HistoryScreen } from './src/screens/HistoryScreen';
-import { ChartsScreen } from './src/screens/ChartsScreen';
-import { colors } from './src/theme/colors';
-import { ScreenType } from './src/types';
-import { getDatabase } from './src/database/db';
-import { DailyLogRepository } from './src/database/repository';
+import { Header, BottomNav } from '@/frontend/components/common';
+import { DailyLogScreen } from '@/frontend/screens/daily-log/DailyLogScreen';
+import { HistoryScreen } from '@/frontend/screens/history/HistoryScreen';
+import { ChartsScreen } from '@/frontend/screens/charts/ChartsScreen';
+import { colors } from '@/frontend/theme';
+import { ScreenType } from '@/types';
+import { getDatabase } from '@/data/local/db';
+import { DailyLogRepository } from '@/data/repositories';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('daily');
   const [dbReady, setDbReady] = useState<boolean>(false);
   const [isTodayInDeficit, setIsTodayInDeficit] = useState<boolean>(true);
 
-  // Initialize SQLite database on startup
   useEffect(() => {
     async function setup() {
       try {
@@ -76,10 +74,10 @@ export default function App() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <StatusBar style="dark" />
         
-        {/* Top Header */}
+        {/* Top Header with Transversal Badge */}
         <Header subtitle={getSubtitle()} isDeficit={isTodayInDeficit} />
 
-        {/* Main Screen Body */}
+        {/* Main Screen Content */}
         <View style={styles.mainContainer}>
           {currentScreen === 'daily' && (
             <DailyLogScreen onDataChanged={checkTodayStatus} />

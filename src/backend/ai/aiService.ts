@@ -1,7 +1,4 @@
-/**
- * AI Service for Calorie Estimation and Mindful Tips
- * Fully decoupled to allow calling Google Gemini API or local heuristics.
- */
+import { SYSTEM_NUTRITION_PROMPT } from './prompts';
 
 export interface AIAnalysisResult {
   estimatedCalories: number;
@@ -17,10 +14,6 @@ export class AIService {
     this.apiKey = key;
   }
 
-  /**
-   * Estimates calories from a natural language text (e.g. "Milanesa de pollo con ensalada mixta").
-   * Connects to Gemini API if key is available, or uses intelligent heuristic parser.
-   */
   public static async estimateCalories(text: string): Promise<AIAnalysisResult> {
     if (!text || text.trim() === '') {
       return {
@@ -31,7 +24,6 @@ export class AIService {
       };
     }
 
-    // Check if user has provided an inline number (e.g. "1510" or "1510 kcal")
     const matchNumber = text.match(/(\d{3,4})\s*(kcal)?/i);
     if (matchNumber) {
       const val = parseInt(matchNumber[1], 10);
@@ -43,7 +35,6 @@ export class AIService {
       };
     }
 
-    // If Gemini API Key is configured, make the live call
     if (this.apiKey) {
       try {
         const response = await fetch(
@@ -56,7 +47,7 @@ export class AIService {
                 {
                   parts: [
                     {
-                      text: `Calcula las calorías aproximadas para: "${text}". Responde únicamente en formato JSON con: {"calories": number, "explanation": string, "tip": string}`,
+                      text: `${SYSTEM_NUTRITION_PROMPT}\n\nAlimentos consumidos: "${text}"`,
                     },
                   ],
                 },
@@ -80,7 +71,7 @@ export class AIService {
       }
     }
 
-    // Smart heuristic fallback (Offline)
+    // Heuristic fallback
     let estimated = 550;
     const lower = text.toLowerCase();
     if (lower.includes('ensalada') || lower.includes('fruta') || lower.includes('yogur')) {
@@ -99,9 +90,6 @@ export class AIService {
     };
   }
 
-  /**
-   * Generates mindful, empathetic feedback based on calories vs target threshold.
-   */
   public static getTipForCalories(consumed: number, target: number = 1800): string {
     const diff = consumed - target;
     if (diff <= -300) {
