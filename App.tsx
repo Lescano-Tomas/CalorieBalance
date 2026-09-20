@@ -8,6 +8,7 @@ import { DailyLogScreen } from '@/frontend/screens/daily-log/DailyLogScreen';
 import { HistoryScreen } from '@/frontend/screens/history/HistoryScreen';
 import { ChartsScreen } from '@/frontend/screens/charts/ChartsScreen';
 import { ProfileScreen } from '@/frontend/screens/profile/ProfileScreen';
+import { ChatScreen } from '@/frontend/screens/chat';
 import { colors } from '@/frontend/theme';
 import { ScreenType, UserProfile } from '@/types';
 import { getDatabase } from '@/data/local/db';
@@ -69,6 +70,8 @@ export default function App() {
     switch (currentScreen) {
       case 'daily':
         return userProfile?.name ? `Hola, ${userProfile.name}` : 'Carga Diaria';
+      case 'chat':
+        return 'Asistente Nutricional';
       case 'charts':
         return 'Gráficos';
       case 'history':
@@ -104,6 +107,12 @@ export default function App() {
         <View style={styles.mainContainer}>
           {currentScreen === 'daily' && (
             <DailyLogScreen
+              onDataChanged={() => checkTodayStatus(userProfile?.target_calories || 1800)}
+              userProfile={userProfile}
+            />
+          )}
+          {currentScreen === 'chat' && (
+            <ChatScreen
               onDataChanged={() => checkTodayStatus(userProfile?.target_calories || 1800)}
               userProfile={userProfile}
             />

@@ -15,9 +15,10 @@ import { Card, Button, StatusBadge } from '@/frontend/components/ui';
 import { ProgressBar } from '@/frontend/components/metrics';
 import { Toast } from '@/frontend/components/common';
 import { MealBreakdownCard } from '@/frontend/components/meals';
+import { RoutinePresetsBar } from '@/frontend/components/routines';
 import { DailyLogRepository, MealEntryRepository } from '@/data/repositories';
 import { CalorieCalculator } from '@/backend/calculations/calorieCalculator';
-import { MealEntry, UserProfile } from '@/types';
+import { MealEntry, UserProfile, MealSlot } from '@/types';
 
 interface DailyLogScreenProps {
   onDataChanged?: () => void;
@@ -418,6 +419,19 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({
                 </Text>
               </View>
             </Card>
+
+            {/* 2-Tap Fast Routine Presets */}
+            <RoutinePresetsBar
+              onLogMeal={async (items) => {
+                await handleAddBatchMeals(
+                  items.map((it) => ({
+                    title: it.title,
+                    calories: it.calories,
+                    quantity: it.quantity,
+                  }))
+                );
+              }}
+            />
 
             {/* Collapsible Meal Breakdown Accordion with Grammage */}
             <MealBreakdownCard

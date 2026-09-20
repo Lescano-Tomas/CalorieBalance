@@ -74,3 +74,42 @@ export const DDL_USER_FOOD_MEMORIES = `
   );
 `;
 
+export const DDL_USER_HABITS = `
+  CREATE TABLE IF NOT EXISTS user_habits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    impact_rule TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`;
+
+export const DDL_DAILY_MEAL_TEMPLATES = `
+  CREATE TABLE IF NOT EXISTS daily_meal_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meal_slot TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    items_json TEXT NOT NULL,
+    total_calories INTEGER NOT NULL,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`;
+
+export const DDL_CHAT_MESSAGES = `
+  CREATE TABLE IF NOT EXISTS chat_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    message_type TEXT NOT NULL,
+    payload_json TEXT,
+    status TEXT NOT NULL DEFAULT 'normal',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`;
+

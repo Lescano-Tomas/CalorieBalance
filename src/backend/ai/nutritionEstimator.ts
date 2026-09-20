@@ -1,5 +1,5 @@
 import { CALIBRATED_NUTRITION_PROMPT } from './prompts';
-import { SettingsRepository, FoodMemoryRepository } from '@/data/repositories';
+import { SettingsRepository, FoodMemoryRepository, HabitRepository } from '@/data/repositories';
 import { EmbeddingsService } from './embeddingsService';
 import { GroqClient } from './groqClient';
 
@@ -77,6 +77,21 @@ export class NutritionEstimator {
       }
     } catch (err) {
       console.warn('Vector memory retrieval error, continuing:', err);
+    }
+
+    // Also inject active culinary habits from HabitRepository
+    try {
+      const activeHabits = await HabitRepository.getActiveHabits();
+      if (activeHabits.length > 0) {
+        const habitsSummary = activeHabits
+          .map((h) => `- [${h.category}] ${h.title}: ${h.description} (${h.impact_rule || ''})`)
+          .join('\n');
+        userHabitsContext = userHabitsContext
+          ? `${userHabitsContext}\n\nHÁBITOS CULINARIOS ACTIVOS:\n${habitsSummary}`
+          : `HÁBITOS CULINARIOS ACTIVOS:\n${habitsSummary}`;
+      }
+    } catch (e) {
+      console.warn('Could not load active habits for estimator:', e);
     }
 
     // 2. Primary Fast Engine: Groq (Llama 3.3 / GPT-OSS 120B)

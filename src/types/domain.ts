@@ -87,3 +87,64 @@ export interface UserSettings {
   created_at?: string;
   updated_at?: string;
 }
+
+export type HabitCategory =
+  | 'cooking_fats'
+  | 'dairy'
+  | 'taste'
+  | 'portion'
+  | 'frequent_dish'
+  | 'general';
+
+export interface UserHabit {
+  id: number;
+  category: HabitCategory;
+  title: string;
+  description: string;
+  impact_rule?: string;
+  is_active: number; // 1 = active, 0 = inactive
+  created_at: string;
+  updated_at: string;
+}
+
+export type MealSlot = 'desayuno' | 'almuerzo' | 'merienda' | 'cena';
+
+export interface DailyMealTemplate {
+  id: number;
+  meal_slot: MealSlot;
+  title: string;
+  items_json: string; // JSON Array of { title: string; quantity: string; calories: number }
+  total_calories: number;
+  is_active: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MessageRole = 'user' | 'assistant' | 'system';
+export type MessageType = 'text' | 'meal_proposal' | 'habit_proposal';
+export type ProposalStatus = 'normal' | 'pending' | 'confirmed' | 'cancelled';
+
+export interface ChatMessage {
+  id: number;
+  role: MessageRole;
+  content: string;
+  message_type: MessageType;
+  payload_json?: string; // JSON of MealProposalPayload or HabitProposalPayload
+  status: ProposalStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MealProposalPayload {
+  mealSlot?: MealSlot | 'snack';
+  items: Array<{ title: string; quantity: string; calories: number }>;
+  totalCalories: number;
+  cookingFatsAudit?: string;
+}
+
+export interface HabitProposalPayload {
+  category: HabitCategory;
+  title: string;
+  description: string;
+  impact_rule?: string;
+}

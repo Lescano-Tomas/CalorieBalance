@@ -15,8 +15,8 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing } from '@/frontend/theme';
 import { Card, Button } from '@/frontend/components/ui';
-import { UserProfile, ActivityLevel, GoalCategory } from '@/types';
-import { UserProfileRepository, FoodMemoryRepository } from '@/data/repositories';
+import { UserProfile, ActivityLevel, GoalCategory, UserHabit } from '@/types';
+import { UserProfileRepository, FoodMemoryRepository, HabitRepository } from '@/data/repositories';
 import { NutritionCalculator } from '@/backend/calculations/nutritionCalculator';
 
 interface ProfileScreenProps {
@@ -44,17 +44,43 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [tempWeight, setTempWeight] = useState<string>('');
   const [saving, setSaving] = useState<boolean>(false);
   const [memoriesCount, setMemoriesCount] = useState<number>(0);
+  const [habits, setHabits] = useState<UserHabit[]>([]);
 
   useEffect(() => {
-    loadMemoriesCount();
+    loadMemoriesAndHabits();
   }, []);
 
-  const loadMemoriesCount = async () => {
+  const loadMemoriesAndHabits = async () => {
     try {
       const memories = await FoodMemoryRepository.getAllMemories(200);
       setMemoriesCount(memories.length);
+      const habitsList = await HabitRepository.getAllHabits();
+      setHabits(habitsList);
     } catch {
       setMemoriesCount(0);
+      setHabits([]);
+    }
+  };
+
+  const handleToggleHabit = async (habit: UserHabit) => {
+    try {
+      await HabitRepository.toggleHabit(habit.id, habit.is_active === 1);
+      setHabits((prev) =>
+        prev.map((h) =>
+          h.id === habit.id ? { ...h, is_active: h.is_active === 1 ? 0 : 1 } : h
+        )
+      );
+    } catch (e: any) {
+      Alert.alert('Error', 'No se pudo cambiar el estado del hábito: ' + e?.message);
+    }
+  };
+
+  const handleDeleteHabit = async (id: number) => {
+    try {
+      await HabitRepository.deleteHabit(id);
+      setHabits((prev) => prev.filter((h) => h.id !== id));
+    } catch (e: any) {
+      Alert.alert('Error', 'No se pudo eliminar el hábito: ' + e?.message);
     }
   };
 
@@ -410,6 +436,68 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           Groq y Google Gemini utilizan esta memoria en SQLite para adaptar automáticamente los
           gramajes, aceites y hábitos a la forma exacta en que cocinás.
         </Text>
+
+        {habits.length > 0 && (
+          <View style={{ marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)', gap: 8 }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: colors.outline, letterSpacing: 0.5 }}>
+              HÁBITOS & PREFERENCIAS REGISTRADAS:
+            </Text>
+            {habits.map((h) => {
+              const isActive = h.is_active === 1;
+              return (
+                <View
+                  key={h.id}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    backgroundColor: isActive ? '#ffffff' : colors.surfaceContainer,
+                    padding: 8,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: isActive ? colors.primaryFixedDim : 'transparent',
+                  }}
+                >
+                  <TouchableOpacity
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                    onPress={() => handleToggleHabit(h)}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialIcons
+                      name={isActive ? 'check-circle' : 'radio-button-unchecked'}
+                      size={18}
+                      color={isActive ? colors.primary : colors.outline}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '700',
+                          color: isActive ? colors.onSurface : colors.outline,
+                        }}
+                      >
+                        {h.title}
+                      </Text>
+                      {!!h.description && (
+                        <Text style={{ fontSize: 10.5, color: colors.outline }} numberOfLines={1}>
+                          {h.description}
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => handleDeleteHabit(h.id)}
+                    hitSlop={8}
+                    style={{ padding: 4 }}
+                  >
+                    <MaterialIcons name="delete-outline" size={16} color={colors.outline} />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </Card>
 
       {/* 5. Guided Assistant Trigger */}

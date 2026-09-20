@@ -6,8 +6,11 @@ import {
   DDL_MEAL_ENTRIES,
   DDL_USER_SETTINGS,
   DDL_USER_FOOD_MEMORIES,
+  DDL_USER_HABITS,
+  DDL_DAILY_MEAL_TEMPLATES,
+  DDL_CHAT_MESSAGES,
 } from '../schemas/tables';
-import { seedDemoData } from '../seeds/seedData';
+import { seedDemoData, seedDefaultRoutinesAndHabits } from '../seeds/seedData';
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
 
@@ -27,6 +30,9 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(DDL_MEAL_ENTRIES);
   await db.execAsync(DDL_USER_SETTINGS);
   await db.execAsync(DDL_USER_FOOD_MEMORIES);
+  await db.execAsync(DDL_USER_HABITS);
+  await db.execAsync(DDL_DAILY_MEAL_TEMPLATES);
+  await db.execAsync(DDL_CHAT_MESSAGES);
 
   // Soft migration in case tables were previously created without new columns
   try {
@@ -66,4 +72,7 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
   if (!countRow || countRow.count === 0) {
     await seedDemoData(db);
   }
+
+  // Always verify that default routines and habits are seeded if empty
+  await seedDefaultRoutinesAndHabits(db);
 }

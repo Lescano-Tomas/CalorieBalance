@@ -1,3 +1,3 @@
-export type ScreenType = 'daily' | 'charts' | 'history' | 'profile';
+export type ScreenType = 'daily' | 'chat' | 'charts' | 'history' | 'profile';
 
 export type PeriodType = 'week' | 'month';

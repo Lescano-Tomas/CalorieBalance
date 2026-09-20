@@ -76,3 +76,110 @@ export async function seedDemoData(db: SQLite.SQLiteDatabase): Promise<void> {
     nowIso
   );
 }
+
+export async function seedDefaultRoutinesAndHabits(db: SQLite.SQLiteDatabase): Promise<void> {
+  const nowIso = new Date().toISOString();
+
+  // Check if daily_meal_templates are seeded
+  const templateCount = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM daily_meal_templates;'
+  );
+
+  if (!templateCount || templateCount.count === 0) {
+    const defaultTemplates = [
+      {
+        meal_slot: 'desayuno',
+        title: 'Desayuno Habitual',
+        items: [
+          { title: 'Café con leche descremada', quantity: '1 taza (200ml)', calories: 95 },
+          { title: 'Tostadas integrales con queso untable light', quantity: '2 unidades', calories: 145 },
+        ],
+        total_calories: 240,
+      },
+      {
+        meal_slot: 'almuerzo',
+        title: 'Almuerzo Habitual',
+        items: [
+          { title: 'Pechuga grillada', quantity: '150g', calories: 220 },
+          { title: 'Ensalada mixta fresca', quantity: '1 plato (150g)', calories: 60 },
+          { title: 'Huevo duro', quantity: '1 unidad', calories: 75 },
+          { title: 'Rocío vegetal / condimento', quantity: '1 porción', calories: 15 },
+        ],
+        total_calories: 370,
+      },
+      {
+        meal_slot: 'merienda',
+        title: 'Merienda Habitual',
+        items: [
+          { title: 'Infusión con leche descremada', quantity: '1 taza', calories: 80 },
+          { title: 'Tostada integral con queso blanco y mermelada light', quantity: '1 unidad', calories: 120 },
+        ],
+        total_calories: 200,
+      },
+      {
+        meal_slot: 'cena',
+        title: 'Cena Habitual',
+        items: [
+          { title: 'Milanesa al horno', quantity: '1 unidad (140g)', calories: 250 },
+          { title: 'Puré de calabaza casero', quantity: '180g', calories: 120 },
+          { title: 'Ensalada verde con rocío vegetal', quantity: '1 porción', calories: 40 },
+        ],
+        total_calories: 410,
+      },
+    ];
+
+    for (const t of defaultTemplates) {
+      await db.runAsync(
+        `INSERT INTO daily_meal_templates (meal_slot, title, items_json, total_calories, is_active, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 1, ?, ?);`,
+        t.meal_slot,
+        t.title,
+        JSON.stringify(t.items),
+        t.total_calories,
+        nowIso,
+        nowIso
+      );
+    }
+  }
+
+  // Check if user_habits are seeded
+  const habitCount = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM user_habits;'
+  );
+
+  if (!habitCount || habitCount.count === 0) {
+    const starterHabits = [
+      {
+        category: 'cooking_fats',
+        title: 'Rocío vegetal (Fritolín)',
+        description: 'Cocina y saltea con rocío vegetal en spray, sin usar aceite líquido de botella.',
+        impact_rule: '5-10 kcal en lugar de 119 kcal por cucharada de aceite común',
+      },
+      {
+        category: 'dairy',
+        title: 'Lácteos descremados',
+        description: 'Toma leche y yogur siempre descremados (0% o 1% tenor graso).',
+        impact_rule: 'Ahorro de ~40-60 kcal por taza respecto a enteros',
+      },
+      {
+        category: 'taste',
+        title: 'Café con poco dulce',
+        description: 'Endulza infusiones con stevia o 1 cucharadita pequeña de mascabo.',
+        impact_rule: '0 a 15 kcal por taza',
+      },
+    ];
+
+    for (const h of starterHabits) {
+      await db.runAsync(
+        `INSERT INTO user_habits (category, title, description, impact_rule, is_active, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 1, ?, ?);`,
+        h.category,
+        h.title,
+        h.description,
+        h.impact_rule,
+        nowIso,
+        nowIso
+      );
+    }
+  }
+}

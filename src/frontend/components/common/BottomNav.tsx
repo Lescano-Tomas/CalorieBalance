@@ -14,7 +14,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onSelectScreen,
 }) => {
   const tabs: { key: ScreenType; label: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
-    { key: 'daily', label: 'Carga Diaria', icon: 'edit-calendar' },
+    { key: 'daily', label: 'Carga', icon: 'edit-calendar' },
+    { key: 'chat', label: 'Asistente', icon: 'chat' },
     { key: 'charts', label: 'Gráficos', icon: 'bar-chart' },
     { key: 'history', label: 'Historial', icon: 'history' },
     { key: 'profile', label: 'Perfil', icon: 'person' },
@@ -45,6 +46,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   styles.tabLabel,
                   isActive && styles.activeTabLabel,
                 ]}
+                numberOfLines={1}
               >
                 {tab.label}
               </Text>
@@ -62,34 +64,34 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(248, 250, 244, 0.95)',
+    backgroundColor: 'rgba(248, 250, 244, 0.96)',
     borderTopWidth: 1,
     borderTopColor: 'rgba(102, 85, 118, 0.08)',
     paddingBottom: spacing.md,
-    paddingTop: spacing.sm,
+    paddingTop: 6,
   },
   navBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    maxWidth: 420,
+    maxWidth: 440,
     marginHorizontal: 'auto',
     width: '100%',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: 8,
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.sm,
+    paddingVertical: 5,
     borderRadius: spacing.radius.md,
-    gap: 3,
+    gap: 2,
   },
   activeTabButton: {
     backgroundColor: colors.primaryFixed,
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 10.5,
     fontWeight: '500',
     color: colors.onSurfaceVariant,
   },
