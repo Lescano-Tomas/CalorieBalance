@@ -17,6 +17,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     { key: 'daily', label: 'Carga Diaria', icon: 'edit-calendar' },
     { key: 'charts', label: 'Gráficos', icon: 'bar-chart' },
     { key: 'history', label: 'Historial', icon: 'history' },
+    { key: 'profile', label: 'Perfil', icon: 'person' },
   ];
 
   return (

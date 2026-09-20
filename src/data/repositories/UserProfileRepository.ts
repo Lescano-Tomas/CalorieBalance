@@ -68,6 +68,29 @@ export class UserProfileRepository {
   }
 
   /**
+   * Updates multiple fields of an active profile with updated_at audit timestamp.
+   */
+  static async updateProfile(
+    id: number,
+    data: Partial<Omit<UserProfile, 'id' | 'created_at' | 'updated_at'>>
+  ): Promise<void> {
+    const db = await getDatabase();
+    const nowIso = new Date().toISOString();
+    const entries = Object.entries(data).filter(([_, v]) => v !== undefined);
+    if (entries.length === 0) return;
+
+    const setClauses = entries.map(([k]) => `${k} = ?`).join(', ');
+    const values = entries.map(([_, v]) => v);
+
+    await db.runAsync(
+      `UPDATE user_profiles SET ${setClauses}, updated_at = ? WHERE id = ?;`,
+      ...values,
+      nowIso,
+      id
+    );
+  }
+
+  /**
    * Retrieves all profiles.
    */
   static async getAllProfiles(): Promise<UserProfile[]> {

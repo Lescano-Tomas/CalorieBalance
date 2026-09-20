@@ -7,6 +7,7 @@ import { OnboardingModal } from '@/frontend/components/onboarding';
 import { DailyLogScreen } from '@/frontend/screens/daily-log/DailyLogScreen';
 import { HistoryScreen } from '@/frontend/screens/history/HistoryScreen';
 import { ChartsScreen } from '@/frontend/screens/charts/ChartsScreen';
+import { ProfileScreen } from '@/frontend/screens/profile/ProfileScreen';
 import { colors } from '@/frontend/theme';
 import { ScreenType, UserProfile } from '@/types';
 import { getDatabase } from '@/data/local/db';
@@ -72,6 +73,8 @@ export default function App() {
         return 'Gráficos';
       case 'history':
         return 'Historial & Pasados';
+      case 'profile':
+        return 'Mi Perfil & Metas';
       default:
         return 'CalorieBalance';
     }
@@ -94,7 +97,7 @@ export default function App() {
         <Header
           subtitle={getSubtitle()}
           isDeficit={isTodayInDeficit}
-          onPressProfile={() => setShowOnboarding(true)}
+          onPressProfile={() => setCurrentScreen('profile')}
         />
 
         {/* Main Screen Content */}
@@ -109,6 +112,16 @@ export default function App() {
           {currentScreen === 'history' && (
             <HistoryScreen
               onDataChanged={() => checkTodayStatus(userProfile?.target_calories || 1800)}
+            />
+          )}
+          {currentScreen === 'profile' && (
+            <ProfileScreen
+              userProfile={userProfile}
+              onProfileUpdated={async (updated) => {
+                setUserProfile(updated);
+                await checkTodayStatus(updated.target_calories);
+              }}
+              onOpenOnboarding={() => setShowOnboarding(true)}
             />
           )}
         </View>
