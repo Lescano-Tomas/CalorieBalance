@@ -7,6 +7,11 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Keyboard,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing } from '@/frontend/theme';
@@ -27,7 +32,7 @@ export const MealBreakdownCard: React.FC<MealBreakdownCardProps> = ({
   onDeleteMeal,
 }) => {
   const [expanded, setExpanded] = useState<boolean>(true);
-  const [showAddForm, setShowAddForm] = useState<boolean>(false);
+  const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [title, setTitle] = useState<string>('');
   const [quantity, setQuantity] = useState<string>('');
   const [caloriesStr, setCaloriesStr] = useState<string>('');
@@ -49,12 +54,13 @@ export const MealBreakdownCard: React.FC<MealBreakdownCardProps> = ({
     }
 
     setAdding(true);
+    Keyboard.dismiss();
     try {
       await onAddMeal(title.trim(), cals, quantity.trim() || undefined);
       setTitle('');
       setQuantity('');
       setCaloriesStr('');
-      setShowAddForm(false);
+      setShowAddModal(false);
     } catch (err: any) {
       Alert.alert('Error', 'No se pudo agregar la comida: ' + err?.message);
     } finally {
@@ -172,29 +178,72 @@ export const MealBreakdownCard: React.FC<MealBreakdownCardProps> = ({
                 </View>
               )}
 
-              {/* Add Meal Form / Trigger */}
-              {showAddForm ? (
-                <View style={styles.formBox}>
-                  <View style={styles.formHeader}>
-                    <Text style={styles.formTitle}>Agregar comida / ingrediente</Text>
+              {/* Add Meal Trigger Button */}
+              <TouchableOpacity
+                style={styles.addTriggerButton}
+                onPress={() => setShowAddModal(true)}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons name="add-circle-outline" size={18} color={colors.primary} />
+                <Text style={styles.addTriggerText}>Agregar comida / ingrediente</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      )}
+
+      {/* Modal for Adding New Meal */}
+      <Modal
+        visible={showAddModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => {
+          setShowAddModal(false);
+          Keyboard.dismiss();
+        }}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalBackdropTouch}>
+              <TouchableWithoutFeedback>
+                <View style={styles.modalCard}>
+                  {/* Modal Header */}
+                  <View style={styles.modalHeader}>
+                    <View style={styles.modalHeaderTitleRow}>
+                      <View style={styles.modalIconBox}>
+                        <MaterialIcons name="restaurant" size={18} color={colors.primary} />
+                      </View>
+                      <Text style={styles.modalTitle}>Agregar Comida</Text>
+                    </View>
                     <TouchableOpacity
-                      onPress={() => setShowAddForm(false)}
-                      style={styles.formCloseBtn}
+                      onPress={() => {
+                        setShowAddModal(false);
+                        Keyboard.dismiss();
+                      }}
+                      style={styles.modalCloseBtn}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                      <MaterialIcons name="close" size={18} color={colors.onSurfaceVariant} />
+                      <MaterialIcons name="close" size={22} color={colors.onSurfaceVariant} />
                     </TouchableOpacity>
                   </View>
+
+                  <Text style={styles.modalSubtitle}>
+                    Indicá el nombre, porción o gramaje y las calorías estimadas.
+                  </Text>
 
                   {/* Input: Nombre */}
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Nombre del alimento</Text>
                     <TextInput
-                      style={styles.textInput}
+                      style={styles.modalTextInput}
                       placeholder="ej. Pechuga de pollo grillada"
                       placeholderTextColor={colors.outlineVariant}
                       value={title}
                       onChangeText={setTitle}
-                      autoFocus
+                      returnKeyType="next"
                     />
                   </View>
 
@@ -203,30 +252,33 @@ export const MealBreakdownCard: React.FC<MealBreakdownCardProps> = ({
                     <View style={[styles.inputGroup, { flex: 1.2 }]}>
                       <Text style={styles.inputLabel}>Cantidad / Gramaje</Text>
                       <TextInput
-                        style={styles.textInput}
+                        style={styles.modalTextInput}
                         placeholder="ej. 150g / 1 taza"
                         placeholderTextColor={colors.outlineVariant}
                         value={quantity}
                         onChangeText={setQuantity}
+                        returnKeyType="next"
                       />
                     </View>
 
                     <View style={[styles.inputGroup, { flex: 1 }]}>
                       <Text style={styles.inputLabel}>Calorías (kcal)</Text>
                       <TextInput
-                        style={styles.textInput}
+                        style={styles.modalTextInput}
                         placeholder="ej. 240"
                         placeholderTextColor={colors.outlineVariant}
                         value={caloriesStr}
                         onChangeText={setCaloriesStr}
                         keyboardType="numeric"
+                        returnKeyType="done"
+                        onSubmitEditing={handleAddSubmit}
                       />
                     </View>
                   </View>
 
                   {/* Submit Button */}
                   <TouchableOpacity
-                    style={[styles.submitButton, adding && styles.submitButtonDisabled]}
+                    style={[styles.modalSubmitButton, adding && styles.submitButtonDisabled]}
                     onPress={handleAddSubmit}
                     disabled={adding}
                     activeOpacity={0.8}
@@ -235,26 +287,17 @@ export const MealBreakdownCard: React.FC<MealBreakdownCardProps> = ({
                       <ActivityIndicator size="small" color={colors.onPrimary} />
                     ) : (
                       <>
-                        <MaterialIcons name="add" size={20} color={colors.onPrimary} />
-                        <Text style={styles.submitButtonText}>Guardar en el día</Text>
+                        <MaterialIcons name="check" size={20} color={colors.onPrimary} />
+                        <Text style={styles.modalSubmitButtonText}>Agregar al Día</Text>
                       </>
                     )}
                   </TouchableOpacity>
                 </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.addTriggerButton}
-                  onPress={() => setShowAddForm(true)}
-                  activeOpacity={0.7}
-                >
-                  <MaterialIcons name="add-circle-outline" size={18} color={colors.primary} />
-                  <Text style={styles.addTriggerText}>Agregar comida / ingrediente</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
-      )}
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </Modal>
     </Card>
   );
 };
@@ -406,27 +449,68 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primary,
   },
-  formBox: {
-    backgroundColor: colors.surfaceContainerLow,
-    borderRadius: spacing.radius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-    marginTop: spacing.xs,
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBackdropTouch: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.surface,
+    borderRadius: spacing.radius.xl,
+    padding: spacing.lg,
+    gap: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    elevation: 10,
     borderWidth: 1,
     borderColor: colors.surfaceContainerHighest,
   },
-  formHeader: {
+  modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  formTitle: {
-    fontSize: 13,
+  modalHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  modalIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primaryFixed,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 16,
     fontWeight: '700',
     color: colors.onSurface,
   },
-  formCloseBtn: {
-    padding: 2,
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: colors.onSurfaceVariant,
+    lineHeight: 16,
+    marginTop: -4,
   },
   inputGroup: {
     gap: 4,
@@ -436,35 +520,35 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.onSurfaceVariant,
   },
-  textInput: {
-    height: 42,
+  modalTextInput: {
+    height: 48,
     backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: spacing.radius.sm,
+    borderRadius: spacing.radius.md,
     borderWidth: 1,
     borderColor: colors.surfaceContainerHighest,
-    paddingHorizontal: spacing.sm,
-    fontSize: 14,
+    paddingHorizontal: spacing.md,
+    fontSize: 15,
     color: colors.onSurface,
   },
   formRow: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  submitButton: {
-    height: 42,
+  modalSubmitButton: {
+    height: 48,
     backgroundColor: colors.primary,
-    borderRadius: spacing.radius.sm,
+    borderRadius: spacing.radius.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
     marginTop: 4,
   },
   submitButtonDisabled: {
     opacity: 0.6,
   },
-  submitButtonText: {
-    fontSize: 13,
+  modalSubmitButtonText: {
+    fontSize: 15,
     fontWeight: '700',
     color: colors.onPrimary,
   },

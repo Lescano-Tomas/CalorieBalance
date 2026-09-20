@@ -8,6 +8,10 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing } from '@/frontend/theme';
@@ -238,11 +242,19 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({
   );
 
   return (
-    <View style={styles.screenWrapper}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+    <KeyboardAvoidingView
+      style={styles.screenWrapper}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
         {/* Sleek Date Navigator: < Hoy, 20 de Septiembre > */}
         <View style={styles.dateNavigatorContainer}>
           <TouchableOpacity
@@ -390,6 +402,8 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({
           </View>
         )}
       </ScrollView>
+    </View>
+  </TouchableWithoutFeedback>
 
       {/* Floating Confirmation Toast */}
       <Toast
@@ -397,7 +411,7 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({
         message={toastMessage}
         onHide={() => setToastVisible(false)}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -409,10 +423,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    paddingBottom: 110,
+    paddingBottom: 160,
     maxWidth: 480,
     marginHorizontal: 'auto',
     width: '100%',
+    flexGrow: 1,
   },
   dateNavigatorContainer: {
     flexDirection: 'row',
