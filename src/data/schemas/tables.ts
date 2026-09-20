@@ -41,6 +41,7 @@ export const DDL_MEAL_ENTRIES = `
     daily_log_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     calories INTEGER NOT NULL,
+    quantity TEXT,
     time TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,

@@ -14,16 +14,18 @@ export class MealEntryRepository {
     dailyLogId: number,
     title: string,
     calories: number,
+    quantity?: string,
     time?: string
   ): Promise<MealEntry> {
     const db = await getDatabase();
     const nowIso = new Date().toISOString();
     const res = await db.runAsync(
-      `INSERT INTO meal_entries (daily_log_id, title, calories, time, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?);`,
+      `INSERT INTO meal_entries (daily_log_id, title, calories, quantity, time, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?);`,
       dailyLogId,
       title,
       calories,
+      quantity || null,
       time || null,
       nowIso,
       nowIso
@@ -33,6 +35,7 @@ export class MealEntryRepository {
       daily_log_id: dailyLogId,
       title,
       calories,
+      quantity: quantity || undefined,
       time,
       created_at: nowIso,
       updated_at: nowIso,

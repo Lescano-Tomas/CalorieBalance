@@ -40,6 +40,12 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
   }
 
   try {
+    await db.execAsync('ALTER TABLE meal_entries ADD COLUMN quantity TEXT;');
+  } catch {
+    // Column already exists, ignore
+  }
+
+  try {
     await db.execAsync('ALTER TABLE user_settings ADD COLUMN created_at TEXT;');
   } catch {
     // Column already exists, ignore

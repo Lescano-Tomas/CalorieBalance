@@ -65,6 +65,7 @@ export interface MealEntry {
   daily_log_id: number;
   title: string;
   calories: number;
+  quantity?: string; // ej: "150g", "200g", "2 huevos", "1 taza"
   time?: string;
   // Mandatory audit fields
   created_at: string;

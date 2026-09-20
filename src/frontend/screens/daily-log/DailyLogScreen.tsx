@@ -14,9 +14,10 @@ import { colors, spacing } from '@/frontend/theme';
 import { Card, Button, StatusBadge } from '@/frontend/components/ui';
 import { ProgressBar } from '@/frontend/components/metrics';
 import { Toast } from '@/frontend/components/common';
-import { DailyLogRepository, UserProfileRepository } from '@/data/repositories';
+import { MealBreakdownCard } from '@/frontend/components/meals';
+import { DailyLogRepository, MealEntryRepository } from '@/data/repositories';
 import { CalorieCalculator } from '@/backend/calculations/calorieCalculator';
-import { UserProfile } from '@/types';
+import { MealEntry, UserProfile } from '@/types';
 
 interface DailyLogScreenProps {
   onDataChanged?: () => void;
@@ -29,7 +30,10 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({
 }) => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [calories, setCalories] = useState<number>(0);
+  const [dailyLogId, setDailyLogId] = useState<number | null>(null);
+  const [meals, setMeals] = useState<MealEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [mealsLoading, setMealsLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [toastVisible, setToastVisible] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string>('');
@@ -90,19 +94,97 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({
 
   const loadLogForDate = async (d: Date) => {
     setLoading(true);
+    setMealsLoading(true);
     try {
       const dateStr = formatDateStr(d);
       const record = await DailyLogRepository.getByDate(dateStr);
       if (record) {
+        setDailyLogId(record.id);
         setCalories(record.calories_consumed);
+        const mealList = await MealEntryRepository.getByDailyLogId(record.id);
+        setMeals(mealList);
       } else {
-        // Default to 0 or target if empty
+        setDailyLogId(null);
         setCalories(0);
+        setMeals([]);
       }
     } catch (err) {
       console.error('Error loading log:', err);
     } finally {
       setLoading(false);
+      setMealsLoading(false);
+    }
+  };
+
+  const handleAddMeal = async (mealTitle: string, cals: number, quantity?: string) => {
+    try {
+      let currentLogId = dailyLogId;
+      const newTotal = calories + cals;
+
+      if (!currentLogId) {
+        const savedLog = await DailyLogRepository.saveLog(
+          currentDateStr,
+          newTotal,
+          targetCalories,
+          undefined,
+          userProfile?.id
+        );
+        currentLogId = savedLog.id;
+        setDailyLogId(savedLog.id);
+      } else {
+        await DailyLogRepository.saveLog(
+          currentDateStr,
+          newTotal,
+          targetCalories,
+          undefined,
+          userProfile?.id
+        );
+      }
+
+      const newEntry = await MealEntryRepository.addMeal(
+        currentLogId,
+        mealTitle,
+        cals,
+        quantity
+      );
+
+      setMeals((prev) => [...prev, newEntry]);
+      setCalories(newTotal);
+      setToastMessage(`¡Agregado! ${mealTitle} (${cals} kcal${quantity ? ' • ' + quantity : ''})`);
+      setToastVisible(true);
+      if (onDataChanged) onDataChanged();
+    } catch (err: any) {
+      Alert.alert('Error', 'No se pudo registrar la comida: ' + err?.message);
+      throw err;
+    }
+  };
+
+  const handleDeleteMeal = async (id: number) => {
+    try {
+      const mealToDelete = meals.find((m) => m.id === id);
+      const calsToSubtract = mealToDelete?.calories || 0;
+      await MealEntryRepository.deleteMeal(id);
+      const updated = meals.filter((m) => m.id !== id);
+      setMeals(updated);
+      const newTotal = Math.max(0, calories - calsToSubtract);
+      setCalories(newTotal);
+
+      if (dailyLogId) {
+        await DailyLogRepository.saveLog(
+          currentDateStr,
+          newTotal,
+          targetCalories,
+          undefined,
+          userProfile?.id
+        );
+      }
+
+      setToastMessage(`Comida eliminada (-${calsToSubtract} kcal)`);
+      setToastVisible(true);
+      if (onDataChanged) onDataChanged();
+    } catch (err: any) {
+      Alert.alert('Error', 'No se pudo eliminar: ' + err?.message);
+      throw err;
     }
   };
 
@@ -286,6 +368,14 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({
                 </Text>
               </View>
             </Card>
+
+            {/* Collapsible Meal Breakdown Accordion with Grammage */}
+            <MealBreakdownCard
+              meals={meals}
+              loading={mealsLoading}
+              onAddMeal={handleAddMeal}
+              onDeleteMeal={handleDeleteMeal}
+            />
 
             {/* Prominent Action Button: Instant 1-tap save */}
             <View style={styles.actionContainer}>
