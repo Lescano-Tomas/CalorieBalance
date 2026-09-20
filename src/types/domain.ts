@@ -7,11 +7,17 @@ export type ActivityLevel =
   | 'active'      // Ejercicio intenso 6-7 días/semana
   | 'very_active'; // Atleta o doble jornada de entrenamiento
 
+export type GoalCategory = 'deficit' | 'maintenance' | 'surplus';
+export type GoalIntensity = 'sustainable' | 'moderate' | 'aggressive' | 'neutral';
+
 export type GoalType =
-  | 'deficit_moderate'   // -300 kcal (Recomendado, pérdida sostenible de ~1.2kg/mes)
-  | 'deficit_aggressive' // -500 kcal (Déficit marcado)
-  | 'maintenance'        // 0 kcal (Mantener peso corporal)
-  | 'surplus_moderate';  // +300 kcal (Ganancia muscular magra)
+  | 'deficit_sustainable'
+  | 'deficit_moderate'
+  | 'deficit_aggressive'
+  | 'maintenance'
+  | 'surplus_sustainable'
+  | 'surplus_moderate'
+  | 'surplus_aggressive';
 
 export interface UserProfile {
   id: number;
@@ -36,6 +42,9 @@ export interface NutritionPlanResult {
   tdee: number;
   targetCalories: number;
   goalType: GoalType;
+  category: GoalCategory;
+  intensity: GoalIntensity;
+  deltaKcal: number;
   description: string;
 }
 

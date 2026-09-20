@@ -14,7 +14,13 @@ import { colors, spacing } from '@/frontend/theme';
 import { Card, Button } from '@/frontend/components/ui';
 import { NutritionCalculator } from '@/backend/calculations/nutritionCalculator';
 import { UserProfileRepository } from '@/data/repositories';
-import { GenderType, ActivityLevel, GoalType, UserProfile } from '@/types';
+import {
+  GenderType,
+  ActivityLevel,
+  GoalCategory,
+  GoalIntensity,
+  UserProfile,
+} from '@/types';
 
 interface OnboardingModalProps {
   visible: boolean;
@@ -36,7 +42,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const [weight, setWeight] = useState<string>(initialProfile?.weight_kg ? String(initialProfile.weight_kg) : '62');
   const [height, setHeight] = useState<string>(initialProfile?.height_cm ? String(initialProfile.height_cm) : '165');
   const [activity, setActivity] = useState<ActivityLevel>(initialProfile?.activity_level || 'moderate');
-  const [goal, setGoal] = useState<GoalType>(initialProfile?.goal_type || 'deficit_moderate');
+
+  // Dynamic Goal Category & Calorie Delta
+  const initialCategory: GoalCategory = initialProfile?.goal_type?.startsWith('surplus')
+    ? 'surplus'
+    : initialProfile?.goal_type === 'maintenance'
+    ? 'maintenance'
+    : 'deficit';
+
+  const [goalCategory, setGoalCategory] = useState<GoalCategory>(initialCategory);
+  const [calorieDelta, setCalorieDelta] = useState<number>(300);
   const [saving, setSaving] = useState<boolean>(false);
 
   // Parse numbers
@@ -44,13 +59,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const numWeight = parseFloat(weight) || 62;
   const numHeight = parseFloat(height) || 165;
 
-  const plan = NutritionCalculator.calculatePlan(
+  const plan = NutritionCalculator.calculatePlanDynamic(
     gender,
     numWeight,
     numHeight,
     numAge,
     activity,
-    goal
+    goalCategory,
+    calorieDelta
   );
 
   const handleNext = () => {
@@ -79,7 +95,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         weight_kg: numWeight,
         height_cm: numHeight,
         activity_level: activity,
-        goal_type: goal,
+        goal_type: plan.goalType,
         bmr: plan.bmr,
         tdee: plan.tdee,
         target_calories: plan.targetCalories,
@@ -101,33 +117,84 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     { key: 'active', title: 'Activo', desc: 'Entrenamiento intenso 6-7 días por semana', icon: 'bolt' },
   ];
 
-  const goalOptions: { key: GoalType; title: string; desc: string; tag: string; isRecommended?: boolean }[] = [
-    {
-      key: 'deficit_moderate',
-      title: 'Déficit Sostenible (-300 kcal)',
-      desc: 'Quema grasa constante (~1.2 kg al mes) sin pasar hambre ni efecto rebote.',
-      tag: 'Recomendado',
-      isRecommended: true,
-    },
-    {
-      key: 'deficit_aggressive',
-      title: 'Déficit Marcado (-500 kcal)',
-      desc: 'Pérdida acelerada de peso (~2 kg al mes). Requiere mayor disciplina.',
-      tag: 'Acelerado',
-    },
-    {
-      key: 'maintenance',
-      title: 'Mantenimiento (0 kcal)',
-      desc: 'Consumir exactamente lo que gastas para mantener peso y energía.',
-      tag: 'Equilibrio',
-    },
-    {
-      key: 'surplus_moderate',
-      title: 'Superávit Controlado (+300 kcal)',
-      desc: 'Aumento gradual de masa muscular magra acompañado de fuerza.',
-      tag: 'Masa Muscular',
-    },
-  ];
+  const getIntensityTheme = () => {
+    if (goalCategory === 'maintenance') {
+      return {
+        title: 'Balance Neutro',
+        rangeLabel: '0 kcal',
+        icon: 'balance' as const,
+        bg: '#F0F9FF',
+        border: '#7DD3FC',
+        badgeBg: '#E0F2FE',
+        badgeText: '#0369A1',
+        description: 'Consumir exactamente lo que tu cuerpo gasta. Mantiene tu peso corporal y vitalidad estables.',
+      };
+    }
+
+    if (plan.intensity === 'sustainable') {
+      return {
+        title: 'Sostenible',
+        rangeLabel: '100 - 300 kcal',
+        icon: 'eco' as const,
+        bg: '#F0FDF4',
+        border: '#86EFAC',
+        badgeBg: '#DCFCE7',
+        badgeText: '#15803D',
+        description:
+          goalCategory === 'deficit'
+            ? 'Pérdida de grasa constante y segura (~1.0 kg/mes). Cero fatiga ni hambre extrema; máxima adherencia a largo plazo.'
+            : 'Ganancia muscular limpia minimizando la acumulación de tejido graso.',
+      };
+    }
+
+    if (plan.intensity === 'moderate') {
+      return {
+        title: 'Moderado',
+        rangeLabel: '350 - 500 kcal',
+        icon: 'bolt' as const,
+        bg: '#FFFBEB',
+        border: '#FCD34D',
+        badgeBg: '#FEF3C7',
+        badgeText: '#B45309',
+        description:
+          goalCategory === 'deficit'
+            ? 'Ritmo balanceado (~1.5 a 2.0 kg/mes). El estándar recomendado: equilibrio entre velocidad y bienestar.'
+            : 'Aumento progresivo de fuerza y masa muscular magra continua.',
+      };
+    }
+
+    return {
+      title: 'Agresivo',
+      rangeLabel: '> 500 kcal',
+      icon: 'local-fire-department' as const,
+      bg: '#FEF2F2',
+      border: '#FCA5A5',
+      badgeBg: '#FEE2E2',
+      badgeText: '#B91C1C',
+      description:
+        goalCategory === 'deficit'
+          ? 'Pérdida rápida de peso (~2.5+ kg/mes). Requiere mayor disciplina. Recomendado solo por períodos breves.'
+          : 'Fase de volumen intensivo para aumento rápido de peso.',
+    };
+  };
+
+  const intensityTheme = getIntensityTheme();
+
+  const getStep4ButtonLabel = () => {
+    if (goalCategory === 'maintenance') {
+      return 'Continuar con Mantenimiento (0 kcal)';
+    }
+    const sign = goalCategory === 'deficit' ? '-' : '+';
+    const catName = goalCategory === 'deficit' ? 'Déficit' : 'Superávit';
+    const intName =
+      plan.intensity === 'sustainable'
+        ? 'Sostenible'
+        : plan.intensity === 'moderate'
+        ? 'Moderado'
+        : 'Agresivo';
+
+    return `Continuar con ${catName} ${intName} (${sign}${plan.deltaKcal} kcal)`;
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
@@ -314,7 +381,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             </View>
           )}
 
-          {/* STEP 4: Objetivo */}
+          {/* STEP 4: Objetivo Dinámico */}
           {step === 4 && (
             <View style={styles.stepContainer}>
               <View style={styles.stepBadge}>
@@ -322,35 +389,187 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               </View>
               <Text style={styles.title}>¿Cuál es tu objetivo?</Text>
               <Text style={styles.subtitle}>
-                Elegí la intensidad con la que querés encarar tu proceso.
+                Elegí la dirección calórica y ajustá el ritmo a tu medida.
               </Text>
 
-              <View style={styles.optionsList}>
-                {goalOptions.map((opt) => {
-                  const isSelected = goal === opt.key;
-                  return (
+              {/* Categorías Principales */}
+              <View style={styles.categoryTabs}>
+                <TouchableOpacity
+                  style={[
+                    styles.categoryTab,
+                    goalCategory === 'deficit' && styles.categoryTabActive,
+                  ]}
+                  onPress={() => setGoalCategory('deficit')}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons
+                    name="trending-down"
+                    size={20}
+                    color={goalCategory === 'deficit' ? colors.onPrimary : colors.onSurfaceVariant}
+                  />
+                  <Text
+                    style={[
+                      styles.categoryTabText,
+                      goalCategory === 'deficit' && styles.categoryTabTextActive,
+                    ]}
+                  >
+                    Déficit
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.categoryTab,
+                    goalCategory === 'maintenance' && styles.categoryTabActive,
+                  ]}
+                  onPress={() => setGoalCategory('maintenance')}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons
+                    name="balance"
+                    size={20}
+                    color={goalCategory === 'maintenance' ? colors.onPrimary : colors.onSurfaceVariant}
+                  />
+                  <Text
+                    style={[
+                      styles.categoryTabText,
+                      goalCategory === 'maintenance' && styles.categoryTabTextActive,
+                    ]}
+                  >
+                    Mantener
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.categoryTab,
+                    goalCategory === 'surplus' && styles.categoryTabActive,
+                  ]}
+                  onPress={() => setGoalCategory('surplus')}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons
+                    name="trending-up"
+                    size={20}
+                    color={goalCategory === 'surplus' ? colors.onPrimary : colors.onSurfaceVariant}
+                  />
+                  <Text
+                    style={[
+                      styles.categoryTabText,
+                      goalCategory === 'surplus' && styles.categoryTabTextActive,
+                    ]}
+                  >
+                    Superávit
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Ajuste de Kcal (sólo si no es mantenimiento) */}
+              {goalCategory !== 'maintenance' ? (
+                <Card style={styles.adjustCard}>
+                  <Text style={styles.adjustCardTitle}>Ajuste calórico diario</Text>
+
+                  <View style={styles.stepperRow}>
                     <TouchableOpacity
-                      key={opt.key}
-                      style={[styles.optionCard, isSelected && styles.optionCardActive]}
-                      onPress={() => setGoal(opt.key)}
-                      activeOpacity={0.8}
+                      style={[styles.stepperButton, calorieDelta <= 100 && styles.stepperButtonDisabled]}
+                      onPress={() => setCalorieDelta((prev) => Math.max(100, prev - 50))}
+                      disabled={calorieDelta <= 100}
+                      activeOpacity={0.7}
                     >
-                      <View style={styles.optionInfo}>
-                        <View style={styles.optionHeaderRow}>
-                          <Text style={[styles.optionTitle, isSelected && styles.optionTitleActive]}>
-                            {opt.title}
-                          </Text>
-                          {opt.isRecommended && (
-                            <View style={styles.recTag}>
-                              <Text style={styles.recTagText}>Recomendado</Text>
-                            </View>
-                          )}
-                        </View>
-                        <Text style={styles.optionDesc}>{opt.desc}</Text>
-                      </View>
+                      <MaterialIcons
+                        name="remove"
+                        size={22}
+                        color={calorieDelta <= 100 ? colors.outlineVariant : colors.onSurface}
+                      />
                     </TouchableOpacity>
-                  );
-                })}
+
+                    <View style={styles.stepperValueContainer}>
+                      <Text style={styles.stepperValue}>
+                        {goalCategory === 'deficit' ? '-' : '+'}
+                        {calorieDelta}
+                      </Text>
+                      <Text style={styles.stepperUnit}>kcal / día</Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.stepperButton, calorieDelta >= 1000 && styles.stepperButtonDisabled]}
+                      onPress={() => setCalorieDelta((prev) => Math.min(1000, prev + 50))}
+                      disabled={calorieDelta >= 1000}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialIcons
+                        name="add"
+                        size={22}
+                        color={calorieDelta >= 1000 ? colors.outlineVariant : colors.onSurface}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Preset chips */}
+                  <View style={styles.presetChipsRow}>
+                    {[200, 300, 450, 600].map((preset) => {
+                      const isSelectedPreset = calorieDelta === preset;
+                      return (
+                        <TouchableOpacity
+                          key={preset}
+                          style={[styles.presetChip, isSelectedPreset && styles.presetChipActive]}
+                          onPress={() => setCalorieDelta(preset)}
+                          activeOpacity={0.8}
+                        >
+                          <Text
+                            style={[
+                              styles.presetChipText,
+                              isSelectedPreset && styles.presetChipTextActive,
+                            ]}
+                          >
+                            {goalCategory === 'deficit' ? `-${preset}` : `+${preset}`} kcal
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </Card>
+              ) : null}
+
+              {/* Dynamic Intensity Feedback Card */}
+              <View
+                style={[
+                  styles.intensityCard,
+                  { backgroundColor: intensityTheme.bg, borderColor: intensityTheme.border },
+                ]}
+              >
+                <View style={styles.intensityHeader}>
+                  <View style={[styles.intensityBadge, { backgroundColor: intensityTheme.badgeBg }]}>
+                    <MaterialIcons
+                      name={intensityTheme.icon}
+                      size={16}
+                      color={intensityTheme.badgeText}
+                    />
+                    <Text style={[styles.intensityBadgeText, { color: intensityTheme.badgeText }]}>
+                      {intensityTheme.title}
+                    </Text>
+                  </View>
+
+                  <Text style={[styles.intensityRangeText, { color: intensityTheme.badgeText }]}>
+                    {intensityTheme.rangeLabel}
+                  </Text>
+                </View>
+
+                <Text style={styles.intensityDescription}>{intensityTheme.description}</Text>
+
+                <View style={styles.intensityPreviewDivider} />
+
+                <View style={styles.intensityPreviewRow}>
+                  <Text style={styles.intensityPreviewKey}>
+                    Gasto Diario (TDEE): {plan.tdee.toLocaleString()} kcal
+                  </Text>
+                  <Text style={styles.intensityPreviewTarget}>
+                    Meta:{' '}
+                    <Text style={{ fontWeight: '800', color: intensityTheme.badgeText }}>
+                      {plan.targetCalories.toLocaleString()} kcal
+                    </Text>
+                  </Text>
+                </View>
               </View>
             </View>
           )}
@@ -402,8 +621,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
         {/* Footer Buttons */}
         <View style={styles.footer}>
-          {step < 5 ? (
+          {step < 4 ? (
             <Button label="Continuar" icon="arrow-forward" onPress={handleNext} />
+          ) : step === 4 ? (
+            <Button
+              label={getStep4ButtonLabel()}
+              icon="arrow-forward"
+              onPress={handleNext}
+            />
           ) : (
             <Button
               label={`Comenzar con ${plan.targetCalories.toLocaleString()} kcal`}
@@ -678,6 +903,168 @@ const styles = StyleSheet.create({
     color: colors.onSurfaceVariant,
     textAlign: 'center',
     marginTop: spacing.sm,
+  },
+  categoryTabs: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  categoryTab: {
+    flex: 1,
+    height: 48,
+    borderRadius: spacing.radius.md,
+    backgroundColor: colors.surfaceContainerLowest,
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHighest,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  categoryTabActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  categoryTabText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.onSurface,
+  },
+  categoryTabTextActive: {
+    color: colors.onPrimary,
+  },
+  adjustCard: {
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: spacing.radius.lg,
+    padding: spacing.md,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  adjustCardTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.onSurfaceVariant,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.lg,
+    marginVertical: 4,
+  },
+  stepperButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHighest,
+  },
+  stepperButtonDisabled: {
+    opacity: 0.35,
+  },
+  stepperValueContainer: {
+    alignItems: 'center',
+    minWidth: 130,
+  },
+  stepperValue: {
+    fontSize: 34,
+    fontWeight: '800',
+    color: colors.onSurface,
+    letterSpacing: -0.5,
+  },
+  stepperUnit: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.onSurfaceVariant,
+  },
+  presetChipsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    width: '100%',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  presetChip: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: spacing.radius.pill,
+    backgroundColor: colors.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHighest,
+  },
+  presetChipActive: {
+    backgroundColor: colors.primaryFixed,
+    borderColor: colors.primary,
+  },
+  presetChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.onSurfaceVariant,
+  },
+  presetChipTextActive: {
+    color: colors.onPrimaryFixedVariant,
+  },
+  intensityCard: {
+    borderRadius: spacing.radius.lg,
+    padding: spacing.md,
+    borderWidth: 1.5,
+    gap: 6,
+    marginTop: spacing.xs,
+  },
+  intensityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  intensityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: spacing.radius.pill,
+  },
+  intensityBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  intensityRangeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  intensityDescription: {
+    fontSize: 13,
+    color: colors.onSurface,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  intensityPreviewDivider: {
+    height: 1,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    marginVertical: 4,
+  },
+  intensityPreviewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  intensityPreviewKey: {
+    fontSize: 11,
+    color: colors.onSurfaceVariant,
+    fontWeight: '600',
+  },
+  intensityPreviewTarget: {
+    fontSize: 12,
+    color: colors.onSurface,
+    fontWeight: '600',
   },
   footer: {
     position: 'absolute',
