@@ -33,6 +33,28 @@ export class NutritionEstimator {
       };
     }
 
+    // 0. Direct Exact Memory Recall (100% Consistency & 0ms Latency)
+    try {
+      const exactMemory = await FoodMemoryRepository.findLexicalMatch(cleanText);
+      if (exactMemory && exactMemory.breakdown_json) {
+        const cachedItems: EstimatedFoodItem[] = JSON.parse(exactMemory.breakdown_json);
+        if (Array.isArray(cachedItems) && cachedItems.length > 0) {
+          const totalCals =
+            exactMemory.total_calories ||
+            cachedItems.reduce((sum, it) => sum + (it.calories || 0), 0);
+          return {
+            items: cachedItems,
+            totalCalories: totalCals,
+            cookingFatsAudit: 'Recuperado de tu memoria de hábitos para consistencia absoluta.',
+            userHabitApplied: `Recordamos este plato de tu historial (${exactMemory.times_eaten}x).`,
+            source: 'memory',
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Memory direct cache check failed, continuing:', err);
+    }
+
     // 1. Vector Semantic Memory Retrieval (RAG)
     let userHabitsContext = '';
     let habitAppliedNote: string | undefined;
@@ -40,24 +62,17 @@ export class NutritionEstimator {
     try {
       const queryEmbedding = await EmbeddingsService.getEmbedding(cleanText);
       const similarMemories = await FoodMemoryRepository.findSimilarMemories(queryEmbedding, 3, 0.74);
-      const lexicalMemory = await FoodMemoryRepository.findLexicalMatch(cleanText);
 
-      // Consolidate relevant user memories
-      const memoryList = [...similarMemories.map((m) => m.memory)];
-      if (lexicalMemory && !memoryList.some((m) => m.id === lexicalMemory.id)) {
-        memoryList.unshift(lexicalMemory);
-      }
-
-      if (memoryList.length > 0) {
-        userHabitsContext = memoryList
+      if (similarMemories.length > 0) {
+        userHabitsContext = similarMemories
           .slice(0, 3)
           .map(
             (m) =>
-              `- Plato registrado previamente: "${m.meal_text}" (Desglose previo: ${m.breakdown_json}, consumido ${m.times_eaten} veces)`
+              `- Plato registrado previamente: "${m.memory.meal_text}" (Desglose previo: ${m.memory.breakdown_json}, consumido ${m.memory.times_eaten} veces)`
           )
           .join('\n');
 
-        const top = memoryList[0];
+        const top = similarMemories[0].memory;
         habitAppliedNote = `Memoria de hábito: recordamos "${top.meal_text}" de tu historial (${top.times_eaten}x).`;
       }
     } catch (err) {
@@ -127,7 +142,7 @@ export class NutritionEstimator {
   }
 
   /**
-   * Calls Google Gemini 3.6 Flash API with structured JSON output.
+   * Calls Google Gemini 3.6 Flash API with structured JSON output and strict determinism.
    */
   private static async callGeminiApi(
     text: string,
@@ -155,7 +170,8 @@ export class NutritionEstimator {
             },
           ],
           generationConfig: {
-            temperature: 0.2,
+            temperature: 0.0,
+            seed: 42,
             responseMimeType: 'application/json',
           },
         }),

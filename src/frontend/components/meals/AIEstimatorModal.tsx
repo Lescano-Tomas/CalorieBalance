@@ -12,7 +12,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing } from '@/frontend/theme';
@@ -21,7 +20,6 @@ import {
   EstimatedFoodItem,
   EstimationResult,
 } from '@/backend/ai/nutritionEstimator';
-import { SettingsRepository } from '@/data/repositories/SettingsRepository';
 
 interface AIEstimatorModalProps {
   visible: boolean;
@@ -47,48 +45,17 @@ export const AIEstimatorModal: React.FC<AIEstimatorModalProps> = ({
   const [saving, setSaving] = useState<boolean>(false);
   const [result, setResult] = useState<EstimationResult | null>(null);
   const [items, setItems] = useState<EstimatedFoodItem[]>([]);
-  const [showKeyConfig, setShowKeyConfig] = useState<boolean>(false);
-  const [apiKey, setApiKey] = useState<string>('');
-  const [hasApiKey, setHasApiKey] = useState<boolean>(false);
 
   useEffect(() => {
-    if (visible) {
-      checkApiKey();
-    } else {
-      // Reset state on close
+    if (!visible) {
+      // Reset state on modal close
       setInputText('');
       setResult(null);
       setItems([]);
       setLoading(false);
       setSaving(false);
-      setShowKeyConfig(false);
     }
   }, [visible]);
-
-  const checkApiKey = async () => {
-    try {
-      const key = await SettingsRepository.getGeminiApiKey();
-      if (key) {
-        setHasApiKey(true);
-        setApiKey(key);
-      } else {
-        setHasApiKey(false);
-      }
-    } catch {
-      setHasApiKey(false);
-    }
-  };
-
-  const handleSaveApiKey = async () => {
-    try {
-      await SettingsRepository.setGeminiApiKey(apiKey.trim());
-      setHasApiKey(!!apiKey.trim());
-      setShowKeyConfig(false);
-      Alert.alert('Configuración guardada', 'Tu API Key de Gemini ha sido configurada con éxito.');
-    } catch (err: any) {
-      Alert.alert('Error', 'No se pudo guardar la clave: ' + err?.message);
-    }
-  };
 
   const handleEstimate = async (textToAnalyze?: string) => {
     const text = (textToAnalyze || inputText).trim();
@@ -148,335 +115,249 @@ export const AIEstimatorModal: React.FC<AIEstimatorModalProps> = ({
         style={styles.modalOverlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.backdropTouch}>
-            <TouchableWithoutFeedback>
-              <View style={styles.sheetContainer}>
-                {/* Header */}
-                <View style={styles.header}>
-                  <View style={styles.headerTitleRow}>
-                    <View style={styles.sparkleIcon}>
-                      <MaterialIcons name="auto-awesome" size={20} color={colors.primary} />
-                    </View>
-                    <View>
-                      <Text style={styles.headerTitle}>Estimación con IA</Text>
-                      <Text style={styles.headerSubtitle}>
-                        Gramajes reales y auditoría de aceites
-                      </Text>
-                    </View>
-                  </View>
+        {/* Sibling Backdrop: Tapping outside dismisses keyboard and closes modal */}
+        <TouchableOpacity
+          style={styles.backdropTouch}
+          activeOpacity={1}
+          onPress={() => {
+            Keyboard.dismiss();
+            onClose();
+          }}
+        />
 
-                  <View style={styles.headerActions}>
-                    <TouchableOpacity
-                      onPress={() => setShowKeyConfig((prev) => !prev)}
-                      style={[styles.iconButton, hasApiKey && styles.iconButtonActive]}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <MaterialIcons
-                        name={hasApiKey ? 'vpn-key' : 'key-off'}
-                        size={18}
-                        color={hasApiKey ? colors.primary : colors.outline}
-                      />
-                    </TouchableOpacity>
+        {/* Sheet Container: DIRECT view without gesture-intercepting touchable wrappers */}
+        <View style={styles.sheetContainer}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerTitleRow}>
+              <View style={styles.sparkleIcon}>
+                <MaterialIcons name="auto-awesome" size={20} color={colors.primary} />
+              </View>
+              <View>
+                <Text style={styles.headerTitle}>Estimación Inteligente</Text>
+                <Text style={styles.headerSubtitle}>
+                  Porciones reales y auditoría de aceites
+                </Text>
+              </View>
+            </View>
 
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                onPress={onClose}
+                style={styles.iconButton}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <MaterialIcons name="close" size={22} color={colors.onSurfaceVariant} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Native ScrollView with full gesture responder access */}
+          <ScrollView
+            style={styles.scrollArea}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            nestedScrollEnabled={true}
+            showsVerticalScrollIndicator={true}
+            bounces={true}
+          >
+            {/* Step 1: Input & Suggestions */}
+            {!result ? (
+              <>
+                <Text style={styles.helperText}>
+                  Escribí o dictale con el micrófono de tu teclado tal como hablás. La IA desarmará tu plato en porciones reales y sumará las calorías invisibles de cocción.
+                </Text>
+
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.mainInput}
+                    placeholder="ej. Milanesa con puré y ensalada de tomate y lechuga"
+                    placeholderTextColor={colors.outlineVariant}
+                    value={inputText}
+                    onChangeText={setInputText}
+                    multiline={true}
+                    numberOfLines={3}
+                    returnKeyType="done"
+                  />
+
+                  {inputText.length > 0 && (
                     <TouchableOpacity
-                      onPress={onClose}
-                      style={styles.iconButton}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      style={styles.clearInputBtn}
+                      onPress={() => setInputText('')}
                     >
-                      <MaterialIcons name="close" size={22} color={colors.onSurfaceVariant} />
+                      <MaterialIcons name="cancel" size={18} color={colors.outline} />
                     </TouchableOpacity>
-                  </View>
+                  )}
                 </View>
 
-                {/* API Key Inline Configuration Drawer */}
-                {showKeyConfig && (
-                  <View style={styles.keyConfigCard}>
-                    <View style={styles.keyConfigHeader}>
-                      <MaterialIcons name="settings" size={16} color={colors.primary} />
-                      <Text style={styles.keyConfigTitle}>Google Gemini API Key (Opcional)</Text>
-                    </View>
-                    <Text style={styles.keyConfigText}>
-                      Si tenés una API Key gratuita de Google AI Studio, ingresala acá para análisis con Gemini 1.5 Flash. Si no, usaremos la base de datos argentina local sin costo.
-                    </Text>
-                    <TextInput
-                      style={styles.keyInput}
-                      placeholder="Pegar tu API Key (AIzaSy...)"
-                      placeholderTextColor={colors.outlineVariant}
-                      value={apiKey}
-                      onChangeText={setApiKey}
-                      secureTextEntry={true}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                    <View style={styles.keyActionsRow}>
-                      <TouchableOpacity
-                        style={styles.keySaveBtn}
-                        onPress={handleSaveApiKey}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.keySaveBtnText}>Guardar Clave</Text>
-                      </TouchableOpacity>
-                      {hasApiKey && (
-                        <TouchableOpacity
-                          style={styles.keyClearBtn}
-                          onPress={async () => {
-                            await SettingsRepository.setGeminiApiKey('');
-                            setApiKey('');
-                            setHasApiKey(false);
-                            setShowKeyConfig(false);
-                            Alert.alert('Clave eliminada', 'Se usará la base heurística local.');
-                          }}
-                        >
-                          <Text style={styles.keyClearBtnText}>Quitar</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
-                )}
+                {/* Quick Suggestions Chips */}
+                <Text style={styles.chipsSectionTitle}>Ejemplos rápidos para probar:</Text>
+                <View style={styles.chipsContainer}>
+                  {QUICK_SUGGESTIONS.map((suggestion, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={styles.chip}
+                      onPress={() => {
+                        setInputText(suggestion);
+                        handleEstimate(suggestion);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialIcons name="touch-app" size={14} color={colors.primary} />
+                      <Text style={styles.chipText}>{suggestion}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
-                <ScrollView
-                  style={styles.scrollArea}
-                  contentContainerStyle={styles.scrollContent}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
+                {/* Estimate Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.estimateBtn,
+                    (!inputText.trim() || loading) && styles.estimateBtnDisabled,
+                  ]}
+                  onPress={() => handleEstimate()}
+                  disabled={!inputText.trim() || loading}
+                  activeOpacity={0.8}
                 >
-                  {/* Step 1: Input & Suggestions */}
-                  {!result ? (
-                    <>
-                      <Text style={styles.helperText}>
-                        Escribí o dictale con el micrófono de tu teclado tal como hablás. La IA desarmará tu plato en porciones reales y sumará las calorías invisibles de cocción.
+                  {loading ? (
+                    <View style={styles.loadingRow}>
+                      <ActivityIndicator size="small" color={colors.onPrimary} />
+                      <Text style={styles.estimateBtnText}>
+                        Analizando alimentos y porciones...
                       </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.loadingRow}>
+                      <MaterialIcons name="auto-awesome" size={20} color={colors.onPrimary} />
+                      <Text style={styles.estimateBtnText}>Calcular Calorías</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </>
+            ) : (
+              /* Step 2: Results and Confirmation */
+              <>
+                {/* Clean Status & Reset Bar */}
+                <View style={styles.resultHeaderBar}>
+                  <View style={styles.sourceBadge}>
+                    <MaterialIcons
+                      name={result.userHabitApplied ? 'auto-stories' : 'auto-awesome'}
+                      size={14}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.sourceBadgeText}>
+                      {result.userHabitApplied ? 'Hábito Personalizado' : 'Estimación Calibrada'}
+                    </Text>
+                  </View>
 
-                      <View style={styles.inputContainer}>
-                        <TextInput
-                          style={styles.mainInput}
-                          placeholder="ej. Milanesa con puré y ensalada de tomate y lechuga"
-                          placeholderTextColor={colors.outlineVariant}
-                          value={inputText}
-                          onChangeText={setInputText}
-                          multiline={true}
-                          numberOfLines={3}
-                          returnKeyType="done"
-                        />
+                  <TouchableOpacity
+                    style={styles.retryBtn}
+                    onPress={() => {
+                      setResult(null);
+                      setItems([]);
+                    }}
+                  >
+                    <MaterialIcons name="edit" size={14} color={colors.primary} />
+                    <Text style={styles.retryBtnText}>Modificar plato</Text>
+                  </TouchableOpacity>
+                </View>
 
-                        {inputText.length > 0 && (
-                          <TouchableOpacity
-                            style={styles.clearInputBtn}
-                            onPress={() => setInputText('')}
-                          >
-                            <MaterialIcons name="cancel" size={18} color={colors.outline} />
-                          </TouchableOpacity>
-                        )}
-                      </View>
+                {/* User Habit / Semantic Memory Callout */}
+                {result.userHabitApplied ? (
+                  <View style={styles.habitCallout}>
+                    <View style={styles.habitCalloutHeader}>
+                      <MaterialIcons name="psychology" size={16} color={colors.primary} />
+                      <Text style={styles.habitCalloutTitle}>Hábito Personalizado</Text>
+                    </View>
+                    <Text style={styles.habitCalloutDesc}>{result.userHabitApplied}</Text>
+                  </View>
+                ) : null}
 
-                      {/* Quick Suggestions Chips */}
-                      <Text style={styles.chipsSectionTitle}>Ejemplos rápidos para probar:</Text>
-                      <View style={styles.chipsContainer}>
-                        {QUICK_SUGGESTIONS.map((suggestion, idx) => (
-                          <TouchableOpacity
-                            key={idx}
-                            style={styles.chip}
-                            onPress={() => {
-                              setInputText(suggestion);
-                              handleEstimate(suggestion);
-                            }}
-                            activeOpacity={0.7}
-                          >
-                            <MaterialIcons name="touch-app" size={14} color={colors.primary} />
-                            <Text style={styles.chipText}>{suggestion}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
+                {/* Hidden Cooking Fats / Anti-Underreporting Card */}
+                {result.cookingFatsAudit ? (
+                  <View style={styles.auditCallout}>
+                    <View style={styles.auditCalloutHeader}>
+                      <MaterialIcons name="verified-user" size={16} color={colors.secondary} />
+                      <Text style={styles.auditCalloutTitle}>
+                        Auditoría de Grasas y Cocción
+                      </Text>
+                    </View>
+                    <Text style={styles.auditCalloutDesc}>{result.cookingFatsAudit}</Text>
+                  </View>
+                ) : null}
 
-                      {/* Estimate Button */}
-                      <TouchableOpacity
-                        style={[
-                          styles.estimateBtn,
-                          (!inputText.trim() || loading) && styles.estimateBtnDisabled,
-                        ]}
-                        onPress={() => handleEstimate()}
-                        disabled={!inputText.trim() || loading}
-                        activeOpacity={0.8}
-                      >
-                        {loading ? (
-                          <View style={styles.loadingRow}>
-                            <ActivityIndicator size="small" color={colors.onPrimary} />
-                            <Text style={styles.estimateBtnText}>
-                              Analizando alimentos y porciones...
+                {/* Items List */}
+                <Text style={styles.itemsListTitle}>Alimentos identificados ({items.length}):</Text>
+
+                <View style={styles.itemsCard}>
+                  {items.map((item, idx) => (
+                    <View key={idx}>
+                      <View style={styles.itemRow}>
+                        <View style={styles.itemMainInfo}>
+                          <Text style={styles.itemTitle}>{item.title}</Text>
+                          <View style={styles.itemMetaRow}>
+                            <View style={styles.grammageBadge}>
+                              <MaterialIcons name="scale" size={12} color={colors.primary} />
+                              <Text style={styles.grammageBadgeText}>{item.quantity}</Text>
+                            </View>
+                            <Text style={styles.itemCaloriesBadge}>
+                              {item.calories} kcal
                             </Text>
                           </View>
-                        ) : (
-                          <View style={styles.loadingRow}>
-                            <MaterialIcons name="auto-awesome" size={20} color={colors.onPrimary} />
-                            <Text style={styles.estimateBtnText}>Calcular Calorías con IA</Text>
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    /* Step 2: Results and Confirmation */
-                    <>
-                      {/* Engine Tag & Reset */}
-                      <View style={styles.resultHeaderBar}>
-                        {(() => {
-                          const badge = (() => {
-                            switch (result.source) {
-                              case 'groq':
-                                return {
-                                  icon: 'bolt' as const,
-                                  label: '⚡ Groq Ultra-Fast (~200ms)',
-                                  bgStyle: styles.sourceBadgeGroq,
-                                  textColor: '#d84315',
-                                };
-                              case 'gemini':
-                                return {
-                                  icon: 'psychology' as const,
-                                  label: '✨ Google Gemini 3.6 Flash',
-                                  bgStyle: styles.sourceBadgeGemini,
-                                  textColor: colors.primary,
-                                };
-                              case 'memory':
-                                return {
-                                  icon: 'auto-stories' as const,
-                                  label: '🧠 Memoria de Hábitos',
-                                  bgStyle: styles.sourceBadgeMemory,
-                                  textColor: colors.secondary,
-                                };
-                              default:
-                                return {
-                                  icon: 'inventory-2' as const,
-                                  label: '🇦🇷 Base Argentina Calibrada',
-                                  bgStyle: styles.sourceBadgeLocal,
-                                  textColor: colors.secondary,
-                                };
-                            }
-                          })();
-
-                          return (
-                            <View style={[styles.sourceBadge, badge.bgStyle]}>
-                              <MaterialIcons
-                                name={badge.icon}
-                                size={14}
-                                color={badge.textColor}
-                              />
-                              <Text style={[styles.sourceBadgeText, { color: badge.textColor }]}>
-                                {badge.label}
-                              </Text>
-                            </View>
-                          );
-                        })()}
+                        </View>
 
                         <TouchableOpacity
-                          style={styles.retryBtn}
-                          onPress={() => {
-                            setResult(null);
-                            setItems([]);
-                          }}
+                          style={styles.removeItemBtn}
+                          onPress={() => handleRemoveItem(idx)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <MaterialIcons name="edit" size={14} color={colors.primary} />
-                          <Text style={styles.retryBtnText}>Modificar texto</Text>
+                          <MaterialIcons name="close" size={18} color={colors.outline} />
                         </TouchableOpacity>
                       </View>
+                      {idx < items.length - 1 && <View style={styles.itemDivider} />}
+                    </View>
+                  ))}
+                </View>
 
-                      {/* User Habit / Semantic Memory Callout */}
-                      {result.userHabitApplied ? (
-                        <View style={styles.habitCallout}>
-                          <View style={styles.habitCalloutHeader}>
-                            <MaterialIcons name="psychology" size={16} color={colors.primary} />
-                            <Text style={styles.habitCalloutTitle}>Hábito Personalizado</Text>
-                          </View>
-                          <Text style={styles.habitCalloutDesc}>{result.userHabitApplied}</Text>
-                        </View>
-                      ) : null}
+                {/* Total Calories Summary Box */}
+                <View style={styles.summaryTotalBox}>
+                  <View>
+                    <Text style={styles.summaryTotalLabel}>Total estimado calibrado:</Text>
+                    <Text style={styles.summaryTotalSub}>
+                      Sin sesgos de infraestimación
+                    </Text>
+                  </View>
+                  <Text style={styles.summaryTotalNumber}>
+                    {totalCalories.toLocaleString()} <Text style={styles.summaryKcalUnit}>kcal</Text>
+                  </Text>
+                </View>
 
-                      {/* Hidden Cooking Fats / Anti-Underreporting Card */}
-                      {result.cookingFatsAudit ? (
-                        <View style={styles.auditCallout}>
-                          <View style={styles.auditCalloutHeader}>
-                            <MaterialIcons name="verified-user" size={16} color={colors.secondary} />
-                            <Text style={styles.auditCalloutTitle}>
-                              Auditoría de Grasas y Cocción
-                            </Text>
-                          </View>
-                          <Text style={styles.auditCalloutDesc}>{result.cookingFatsAudit}</Text>
-                        </View>
-                      ) : null}
-
-                      {/* Items List */}
-                      <Text style={styles.itemsListTitle}>Alimentos identificados ({items.length}):</Text>
-
-                      <View style={styles.itemsCard}>
-                        {items.map((item, idx) => (
-                          <View key={idx}>
-                            <View style={styles.itemRow}>
-                              <View style={styles.itemMainInfo}>
-                                <Text style={styles.itemTitle}>{item.title}</Text>
-                                <View style={styles.itemMetaRow}>
-                                  <View style={styles.grammageBadge}>
-                                    <MaterialIcons name="scale" size={12} color={colors.primary} />
-                                    <Text style={styles.grammageBadgeText}>{item.quantity}</Text>
-                                  </View>
-                                  <Text style={styles.itemCaloriesBadge}>
-                                    {item.calories} kcal
-                                  </Text>
-                                </View>
-                              </View>
-
-                              <TouchableOpacity
-                                style={styles.removeItemBtn}
-                                onPress={() => handleRemoveItem(idx)}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                              >
-                                <MaterialIcons name="close" size={18} color={colors.outline} />
-                              </TouchableOpacity>
-                            </View>
-                            {idx < items.length - 1 && <View style={styles.itemDivider} />}
-                          </View>
-                        ))}
-                      </View>
-
-                      {/* Total Calories Summary Box */}
-                      <View style={styles.summaryTotalBox}>
-                        <View>
-                          <Text style={styles.summaryTotalLabel}>Total estimado calibrado:</Text>
-                          <Text style={styles.summaryTotalSub}>
-                            Sin sesgos de infraestimación
-                          </Text>
-                        </View>
-                        <Text style={styles.summaryTotalNumber}>
-                          {totalCalories.toLocaleString()} <Text style={styles.summaryKcalUnit}>kcal</Text>
-                        </Text>
-                      </View>
-
-                      {/* Save Button */}
-                      <TouchableOpacity
-                        style={[
-                          styles.confirmBatchBtn,
-                          (items.length === 0 || saving) && styles.estimateBtnDisabled,
-                        ]}
-                        onPress={handleConfirm}
-                        disabled={items.length === 0 || saving}
-                        activeOpacity={0.8}
-                      >
-                        {saving ? (
-                          <ActivityIndicator size="small" color={colors.onPrimary} />
-                        ) : (
-                          <>
-                            <MaterialIcons name="check-circle" size={20} color={colors.onPrimary} />
-                            <Text style={styles.confirmBatchBtnText}>
-                              Guardar todas las comidas ({totalCalories} kcal)
-                            </Text>
-                          </>
-                        )}
-                      </TouchableOpacity>
+                {/* Save Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.confirmBatchBtn,
+                    (items.length === 0 || saving) && styles.estimateBtnDisabled,
+                  ]}
+                  onPress={handleConfirm}
+                  disabled={items.length === 0 || saving}
+                  activeOpacity={0.8}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color={colors.onPrimary} />
+                  ) : (
+                    <>
+                      <MaterialIcons name="check-circle" size={20} color={colors.onPrimary} />
+                      <Text style={styles.confirmBatchBtnText}>
+                        Guardar todas las comidas ({totalCalories} kcal)
+                      </Text>
                     </>
                   )}
-                </ScrollView>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
+                </TouchableOpacity>
+              </>
+            )}
+          </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -489,14 +370,17 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   backdropTouch: {
-    flex: 1,
-    justifyContent: 'flex-end',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   sheetContainer: {
     backgroundColor: colors.surfaceContainerLowest,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    maxHeight: '90%',
+    maxHeight: '88%',
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
@@ -550,71 +434,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconButtonActive: {
-    backgroundColor: colors.primaryFixed,
-  },
-  keyConfigCard: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.surfaceContainerLow,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-  },
-  keyConfigHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  keyConfigTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.onSurface,
-  },
-  keyConfigText: {
-    fontSize: 12,
-    color: colors.onSurfaceVariant,
-    lineHeight: 16,
-    marginBottom: 10,
-  },
-  keyInput: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 13,
-    color: colors.onSurface,
-    marginBottom: 8,
-  },
-  keyActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  keySaveBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  keySaveBtnText: {
-    color: colors.onPrimary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  keyClearBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  keyClearBtnText: {
-    color: colors.error,
-    fontSize: 12,
-    fontWeight: '500',
   },
   scrollArea: {
     maxHeight: 520,
@@ -717,22 +536,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 20,
-  },
-  sourceBadgeGroq: {
-    backgroundColor: '#ffecb3',
-  },
-  sourceBadgeGemini: {
     backgroundColor: colors.primaryFixed,
-  },
-  sourceBadgeMemory: {
-    backgroundColor: colors.secondaryFixedDim,
-  },
-  sourceBadgeLocal: {
-    backgroundColor: colors.secondaryContainer,
   },
   sourceBadgeText: {
     fontSize: 11.5,
     fontWeight: '700',
+    color: colors.primary,
   },
   habitCallout: {
     backgroundColor: colors.primaryFixed,

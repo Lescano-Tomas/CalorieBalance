@@ -64,7 +64,8 @@ export class GroqClient {
           { role: 'user', content: `Comida a desglosar y auditar:\n"${text}"` },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.1,
+        temperature: 0.0,
+        seed: 42,
         max_tokens: 800,
       }),
     });
