@@ -132,6 +132,8 @@ export const AIEstimatorModal: React.FC<AIEstimatorModalProps> = ({
     setSaving(true);
     try {
       await onConfirmBatch(items);
+      // Autonomous background learning to vector knowledge base
+      NutritionEstimator.learnMealMemory(inputText, items, totalCalories);
       onClose();
     } catch (err: any) {
       Alert.alert('Error al guardar', 'No se pudieron guardar los alimentos: ' + err?.message);
@@ -317,32 +319,53 @@ export const AIEstimatorModal: React.FC<AIEstimatorModalProps> = ({
                     <>
                       {/* Engine Tag & Reset */}
                       <View style={styles.resultHeaderBar}>
-                        <View
-                          style={[
-                            styles.sourceBadge,
-                            result.source === 'gemini'
-                              ? styles.sourceBadgeGemini
-                              : styles.sourceBadgeLocal,
-                          ]}
-                        >
-                          <MaterialIcons
-                            name={result.source === 'gemini' ? 'psychology' : 'inventory-2'}
-                            size={14}
-                            color={result.source === 'gemini' ? colors.primary : colors.secondary}
-                          />
-                          <Text
-                            style={[
-                              styles.sourceBadgeText,
-                              result.source === 'gemini'
-                                ? { color: colors.primary }
-                                : { color: colors.secondary },
-                            ]}
-                          >
-                            {result.source === 'gemini'
-                              ? 'Google Gemini Flash'
-                              : 'Base Argentina Calibrada'}
-                          </Text>
-                        </View>
+                        {(() => {
+                          const badge = (() => {
+                            switch (result.source) {
+                              case 'groq':
+                                return {
+                                  icon: 'bolt' as const,
+                                  label: '⚡ Groq Ultra-Fast (~200ms)',
+                                  bgStyle: styles.sourceBadgeGroq,
+                                  textColor: '#d84315',
+                                };
+                              case 'gemini':
+                                return {
+                                  icon: 'psychology' as const,
+                                  label: '✨ Google Gemini 3.6 Flash',
+                                  bgStyle: styles.sourceBadgeGemini,
+                                  textColor: colors.primary,
+                                };
+                              case 'memory':
+                                return {
+                                  icon: 'auto-stories' as const,
+                                  label: '🧠 Memoria de Hábitos',
+                                  bgStyle: styles.sourceBadgeMemory,
+                                  textColor: colors.secondary,
+                                };
+                              default:
+                                return {
+                                  icon: 'inventory-2' as const,
+                                  label: '🇦🇷 Base Argentina Calibrada',
+                                  bgStyle: styles.sourceBadgeLocal,
+                                  textColor: colors.secondary,
+                                };
+                            }
+                          })();
+
+                          return (
+                            <View style={[styles.sourceBadge, badge.bgStyle]}>
+                              <MaterialIcons
+                                name={badge.icon}
+                                size={14}
+                                color={badge.textColor}
+                              />
+                              <Text style={[styles.sourceBadgeText, { color: badge.textColor }]}>
+                                {badge.label}
+                              </Text>
+                            </View>
+                          );
+                        })()}
 
                         <TouchableOpacity
                           style={styles.retryBtn}
@@ -355,6 +378,17 @@ export const AIEstimatorModal: React.FC<AIEstimatorModalProps> = ({
                           <Text style={styles.retryBtnText}>Modificar texto</Text>
                         </TouchableOpacity>
                       </View>
+
+                      {/* User Habit / Semantic Memory Callout */}
+                      {result.userHabitApplied ? (
+                        <View style={styles.habitCallout}>
+                          <View style={styles.habitCalloutHeader}>
+                            <MaterialIcons name="psychology" size={16} color={colors.primary} />
+                            <Text style={styles.habitCalloutTitle}>Hábito Personalizado</Text>
+                          </View>
+                          <Text style={styles.habitCalloutDesc}>{result.userHabitApplied}</Text>
+                        </View>
+                      ) : null}
 
                       {/* Hidden Cooking Fats / Anti-Underreporting Card */}
                       {result.cookingFatsAudit ? (
@@ -684,15 +718,45 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 20,
   },
+  sourceBadgeGroq: {
+    backgroundColor: '#ffecb3',
+  },
   sourceBadgeGemini: {
     backgroundColor: colors.primaryFixed,
+  },
+  sourceBadgeMemory: {
+    backgroundColor: colors.secondaryFixedDim,
   },
   sourceBadgeLocal: {
     backgroundColor: colors.secondaryContainer,
   },
   sourceBadgeText: {
     fontSize: 11.5,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  habitCallout: {
+    backgroundColor: colors.primaryFixed,
+    borderRadius: 14,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+  },
+  habitCalloutHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  habitCalloutTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.onPrimaryFixed,
+  },
+  habitCalloutDesc: {
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: colors.onPrimaryFixedVariant,
   },
   retryBtn: {
     flexDirection: 'row',

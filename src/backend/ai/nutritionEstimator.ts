@@ -1,5 +1,7 @@
 import { CALIBRATED_NUTRITION_PROMPT } from './prompts';
-import { SettingsRepository } from '@/data/repositories';
+import { SettingsRepository, FoodMemoryRepository } from '@/data/repositories';
+import { EmbeddingsService } from './embeddingsService';
+import { GroqClient } from './groqClient';
 
 export interface EstimatedFoodItem {
   title: string;
@@ -11,12 +13,15 @@ export interface EstimationResult {
   items: EstimatedFoodItem[];
   totalCalories: number;
   cookingFatsAudit?: string;
-  source: 'gemini' | 'local_heuristic';
+  userHabitApplied?: string;
+  source: 'groq' | 'gemini' | 'memory' | 'local_heuristic';
 }
 
 export class NutritionEstimator {
   /**
    * Main entry point to estimate meal ingredients, grammages, and calories.
+   * Uses Vector RAG for user habit recall, Groq for ultra-fast Llama inference,
+   * Gemini 3.6 Flash as reasoning fallback, and Argentine heuristic as offline fallback.
    */
   static async estimateMeal(text: string): Promise<EstimationResult> {
     const cleanText = text.trim();
@@ -28,13 +33,61 @@ export class NutritionEstimator {
       };
     }
 
-    // 1. Check for Gemini API key
-    const apiKey = (await SettingsRepository.getGeminiApiKey()) || process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+    // 1. Vector Semantic Memory Retrieval (RAG)
+    let userHabitsContext = '';
+    let habitAppliedNote: string | undefined;
+
+    try {
+      const queryEmbedding = await EmbeddingsService.getEmbedding(cleanText);
+      const similarMemories = await FoodMemoryRepository.findSimilarMemories(queryEmbedding, 3, 0.74);
+      const lexicalMemory = await FoodMemoryRepository.findLexicalMatch(cleanText);
+
+      // Consolidate relevant user memories
+      const memoryList = [...similarMemories.map((m) => m.memory)];
+      if (lexicalMemory && !memoryList.some((m) => m.id === lexicalMemory.id)) {
+        memoryList.unshift(lexicalMemory);
+      }
+
+      if (memoryList.length > 0) {
+        userHabitsContext = memoryList
+          .slice(0, 3)
+          .map(
+            (m) =>
+              `- Plato registrado previamente: "${m.meal_text}" (Desglose previo: ${m.breakdown_json}, consumido ${m.times_eaten} veces)`
+          )
+          .join('\n');
+
+        const top = memoryList[0];
+        habitAppliedNote = `Memoria de hábito: recordamos "${top.meal_text}" de tu historial (${top.times_eaten}x).`;
+      }
+    } catch (err) {
+      console.warn('Vector memory retrieval error, continuing:', err);
+    }
+
+    // 2. Primary Fast Engine: Groq (Llama 3.3 / GPT-OSS 120B)
+    try {
+      const groqResult = await GroqClient.estimateMeal(cleanText, userHabitsContext);
+      if (groqResult && groqResult.items.length > 0) {
+        if (habitAppliedNote && userHabitsContext) {
+          groqResult.userHabitApplied = habitAppliedNote;
+        }
+        return groqResult;
+      }
+    } catch (err) {
+      console.warn('Groq estimation failed, falling back to Gemini:', err);
+    }
+
+    // 3. Secondary Engine: Google Gemini 3.6 Flash
+    const apiKey =
+      (await SettingsRepository.getGeminiApiKey()) || process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 
     if (apiKey) {
       try {
-        const geminiResult = await this.callGeminiApi(cleanText, apiKey);
+        const geminiResult = await this.callGeminiApi(cleanText, apiKey, userHabitsContext);
         if (geminiResult && geminiResult.items.length > 0) {
+          if (habitAppliedNote && userHabitsContext) {
+            geminiResult.userHabitApplied = habitAppliedNote;
+          }
           return geminiResult;
         }
       } catch (err) {
@@ -42,19 +95,52 @@ export class NutritionEstimator {
       }
     }
 
-    // 2. Fallback to calibrated Argentine heuristic engine
-    return this.estimateLocalHeuristic(cleanText);
+    // 4. Offline Fallback: Calibrated Argentine heuristic engine
+    const heuristicResult = this.estimateLocalHeuristic(cleanText);
+    if (habitAppliedNote) {
+      heuristicResult.userHabitApplied = habitAppliedNote;
+    }
+    return heuristicResult;
   }
 
   /**
-   * Calls Google Gemini 1.5/2.0 Flash API with structured JSON output.
+   * Autonomous Learning: saves confirmed meal to vector knowledge base.
+   */
+  static async learnMealMemory(
+    mealText: string,
+    items: EstimatedFoodItem[],
+    totalCalories: number,
+    userNotes?: string
+  ): Promise<void> {
+    try {
+      const embedding = await EmbeddingsService.getEmbedding(mealText);
+      await FoodMemoryRepository.saveOrUpdateMemory(
+        mealText,
+        items,
+        totalCalories,
+        embedding,
+        userNotes
+      );
+    } catch (err) {
+      console.warn('Failed to learn meal memory in background:', err);
+    }
+  }
+
+  /**
+   * Calls Google Gemini 3.6 Flash API with structured JSON output.
    */
   private static async callGeminiApi(
     text: string,
-    apiKey: string
+    apiKey: string,
+    userHabitsContext?: string
   ): Promise<EstimationResult | null> {
+    let fullPrompt = CALIBRATED_NUTRITION_PROMPT;
+    if (userHabitsContext) {
+      fullPrompt += `\n\nHÁBITOS Y PREFERENCIAS PREVIAS DE ESTA USUARIA (Usa esta memoria si aplica al plato):\n${userHabitsContext}`;
+    }
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,7 +149,7 @@ export class NutritionEstimator {
             {
               parts: [
                 {
-                  text: `${CALIBRATED_NUTRITION_PROMPT}\n\nComida a analizar:\n"${text}"`,
+                  text: `${fullPrompt}\n\nComida a analizar:\n"${text}"`,
                 },
               ],
             },

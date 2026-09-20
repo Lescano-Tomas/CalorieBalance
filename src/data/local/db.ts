@@ -5,6 +5,7 @@ import {
   DDL_DAILY_LOGS,
   DDL_MEAL_ENTRIES,
   DDL_USER_SETTINGS,
+  DDL_USER_FOOD_MEMORIES,
 } from '../schemas/tables';
 import { seedDemoData } from '../seeds/seedData';
 
@@ -25,6 +26,7 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(DDL_DAILY_LOGS);
   await db.execAsync(DDL_MEAL_ENTRIES);
   await db.execAsync(DDL_USER_SETTINGS);
+  await db.execAsync(DDL_USER_FOOD_MEMORIES);
 
   // Soft migration in case tables were previously created without new columns
   try {

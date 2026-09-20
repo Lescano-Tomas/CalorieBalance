@@ -57,3 +57,20 @@ export const DDL_USER_SETTINGS = `
     updated_at TEXT NOT NULL
   );
 `;
+
+export const DDL_USER_FOOD_MEMORIES = `
+  CREATE TABLE IF NOT EXISTS user_food_memories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meal_text TEXT NOT NULL,
+    normalized_title TEXT NOT NULL,
+    breakdown_json TEXT NOT NULL,
+    total_calories INTEGER NOT NULL,
+    embedding TEXT,
+    times_eaten INTEGER NOT NULL DEFAULT 1,
+    last_eaten_at TEXT NOT NULL,
+    user_notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`;
+
