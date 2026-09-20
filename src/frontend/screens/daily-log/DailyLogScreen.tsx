@@ -9,13 +9,11 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing } from '@/frontend/theme';
 import { Card, Button, StatusBadge } from '@/frontend/components/ui';
-import { BentoSummary, ProgressBar } from '@/frontend/components/metrics';
+import { ProgressBar } from '@/frontend/components/metrics';
 import { Toast } from '@/frontend/components/common';
 import { DailyLogRepository } from '@/data/repositories';
-import { AIService } from '@/backend/ai/aiService';
 import { CalorieCalculator } from '@/backend/calculations/calorieCalculator';
 
 interface DailyLogScreenProps {
@@ -24,8 +22,7 @@ interface DailyLogScreenProps {
 
 export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged }) => {
   const [selectedDay, setSelectedDay] = useState<'today' | 'yesterday'>('today');
-  const [calories, setCalories] = useState<number>(1650);
-  const [notes, setNotes] = useState<string>('Menú nutritivo & colación liviana');
+  const [calories, setCalories] = useState<number>(1750);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [toastVisible, setToastVisible] = useState<boolean>(false);
@@ -58,9 +55,8 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
       const record = await DailyLogRepository.getByDate(dateStr);
       if (record) {
         setCalories(record.calories_consumed);
-        if (record.notes) setNotes(record.notes);
       } else {
-        setCalories(day === 'today' ? 1650 : 1720);
+        setCalories(day === 'today' ? 1750 : 1720);
       }
     } catch (err) {
       console.error('Error loading log:', err);
@@ -79,13 +75,12 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
       await DailyLogRepository.saveLog(
         currentDateStr,
         calories,
-        targetCalories,
-        notes
+        targetCalories
       );
       setToastMessage(
         selectedDay === 'today'
-          ? '¡Registro de hoy guardado exitosamente!'
-          : '¡Registro de ayer actualizado!'
+          ? `¡Guardado! ${calories.toLocaleString()} kcal registradas hoy`
+          : `¡Actualizado! ${calories.toLocaleString()} kcal registradas ayer`
       );
       setToastVisible(true);
       if (onDataChanged) onDataChanged();
@@ -96,12 +91,11 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
     }
   };
 
-  const { isDeficit, absDiff } = CalorieCalculator.calculateDeficit(
+  const { isDeficit, absDiff, diff } = CalorieCalculator.calculateDeficit(
     calories,
     targetCalories,
     maxReference
   );
-  const mindfulTip = AIService.getTipForCalories(calories, targetCalories);
 
   return (
     <View style={styles.screenWrapper}>
@@ -148,170 +142,110 @@ export const DailyLogScreen: React.FC<DailyLogScreenProps> = ({ onDataChanged })
           </TouchableOpacity>
         </View>
 
-        {/* Section Header */}
-        <View style={styles.titleSection}>
-          <View style={styles.titleRow}>
-            <Text style={styles.mainHeading}>Registro Diario</Text>
-            <View style={styles.geminiBadge}>
-              <MaterialIcons name="auto-awesome" size={14} color={colors.onPrimaryFixed} />
-              <Text style={styles.geminiBadgeText}>Gemini AI</Text>
-            </View>
-          </View>
-          <Text style={styles.subHeading}>
-            Carga el estimado calórico calculado por Gemini o ingresa el tuyo.
-          </Text>
-        </View>
-
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : (
-          <>
-            {/* Hero Card */}
+          <View style={styles.mainFocusArea}>
+            {/* Core Card */}
             <Card style={styles.heroCard}>
+              {/* Header inside Card */}
               <View style={styles.heroTopRow}>
                 <Text style={styles.heroLabel}>TOTAL CONSUMIDO</Text>
-                <View style={styles.syncTag}>
-                  <View style={styles.syncDot} />
-                  <Text style={styles.syncText}>Sincronizado</Text>
-                </View>
+                <StatusBadge isDeficit={isDeficit} diff={diff} compact />
               </View>
 
               {/* Massive Calorie Counter */}
               <View style={styles.counterRow}>
                 <TextInput
                   style={styles.calorieInput}
-                  value={calories.toString()}
+                  value={calories === 0 ? '' : calories.toString()}
+                  placeholder="0"
+                  placeholderTextColor={colors.outlineVariant}
                   onChangeText={(val) => {
                     const num = parseInt(val, 10);
                     setCalories(isNaN(num) ? 0 : num);
                   }}
                   keyboardType="numeric"
                   maxLength={5}
+                  selectTextOnFocus
                 />
                 <Text style={styles.calorieUnit}>kcal</Text>
               </View>
 
-              {/* Steppers */}
-              <View style={styles.stepperRow}>
+              {/* Quick Nudge Adjustment Chips: -100, -50, +50, +100 */}
+              <View style={styles.nudgeRow}>
                 <TouchableOpacity
-                  style={styles.stepperButton}
+                  style={styles.nudgeChip}
+                  onPress={() => handleAdjust(-100)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.nudgeChipText}>-100</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.nudgeChip}
                   onPress={() => handleAdjust(-50)}
                   activeOpacity={0.7}
                 >
-                  <MaterialIcons name="remove" size={18} color={colors.onSurfaceVariant} />
+                  <Text style={styles.nudgeChipText}>-50</Text>
                 </TouchableOpacity>
-                <Text style={styles.stepperLabel}>Ajuste rápido</Text>
+
                 <TouchableOpacity
-                  style={styles.stepperButton}
+                  style={[styles.nudgeChip, styles.nudgeChipPositive]}
                   onPress={() => handleAdjust(50)}
                   activeOpacity={0.7}
                 >
-                  <MaterialIcons name="add" size={18} color={colors.onSurfaceVariant} />
+                  <Text style={[styles.nudgeChipText, styles.nudgeChipPositiveText]}>+50</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.nudgeChip, styles.nudgeChipPositive]}
+                  onPress={() => handleAdjust(100)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.nudgeChipText, styles.nudgeChipPositiveText]}>+100</Text>
                 </TouchableOpacity>
               </View>
 
-              {/* Dynamic Status Pill */}
-              <View
-                style={[
-                  styles.statusPill,
-                  {
-                    backgroundColor: isDeficit
-                      ? colors.secondaryContainer
-                      : colors.tertiaryFixed,
-                  },
-                ]}
-              >
-                <View style={styles.statusPillLeft}>
-                  <MaterialIcons
-                    name={isDeficit ? 'check-circle' : 'info'}
-                    size={18}
-                    color={isDeficit ? colors.secondary : colors.tertiary}
-                  />
-                  <Text
-                    style={[
-                      styles.statusPillText,
-                      {
-                        color: isDeficit
-                          ? colors.onSecondaryFixedVariant
-                          : colors.onTertiaryFixedVariant,
-                      },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {isDeficit
-                      ? `En déficit (-${absDiff} kcal del umbral)`
-                      : `Superávit (+${absDiff} kcal sobre umbral)`}
-                  </Text>
-                </View>
-
-                <StatusBadge
-                  isDeficit={isDeficit}
-                  text={isDeficit ? 'Meta Lograda' : 'Sobre Meta'}
-                  compact
-                />
-              </View>
-
-              {/* Progress Bar */}
+              {/* Subtle Progress Bar */}
               <ProgressBar
                 consumed={calories}
                 target={targetCalories}
                 maxReference={maxReference}
               />
-            </Card>
 
-            {/* Companion Meal Card */}
-            <Card variant="flat" style={styles.mealCard}>
-              <View style={styles.mealImagePlaceholder}>
-                <MaterialIcons name="restaurant" size={28} color={colors.primary} />
-              </View>
-              <View style={styles.mealInfo}>
-                <View style={styles.mealTop}>
-                  <Text style={styles.mealTag}>LECTURA ESTIMADA</Text>
-                  <Text style={styles.mealTime}>14:30 hs</Text>
-                </View>
-                <Text style={styles.mealTitle} numberOfLines={1}>
-                  {notes}
+              {/* Direct Status Feedback Message */}
+              <View style={styles.statusFooter}>
+                <Text
+                  style={[
+                    styles.statusFooterText,
+                    { color: isDeficit ? colors.secondary : colors.tertiary },
+                  ]}
+                >
+                  {isDeficit
+                    ? `Te quedan ${absDiff.toLocaleString()} kcal para tu meta (1.800 kcal)`
+                    : `Superávit de +${absDiff.toLocaleString()} kcal sobre tu meta`}
                 </Text>
-                <Text style={styles.mealSub}>Cálculo de porciones procesado por IA</Text>
               </View>
             </Card>
 
-            {/* Daily Summary Bento */}
-            <BentoSummary target={targetCalories} consumed={calories} />
-
-            {/* Gemini Mindful Tip */}
-            <View style={styles.tipCard}>
-              <View style={styles.tipIconCircle}>
-                <MaterialIcons name="psychology" size={18} color={colors.primary} />
-              </View>
-              <View style={styles.tipContent}>
-                <View style={styles.tipTitleRow}>
-                  <Text style={styles.tipTitle}>Nota consciente de Gemini</Text>
-                  <MaterialIcons name="verified" size={13} color={colors.primary} />
-                </View>
-                <Text style={styles.tipText}>{mindfulTip}</Text>
-              </View>
+            {/* Prominent Action Button: Instant 1-tap save */}
+            <View style={styles.actionContainer}>
+              <Button
+                label={`Guardar Registro (${calories.toLocaleString()} kcal)`}
+                icon="check-circle"
+                onPress={handleSave}
+                loading={saving}
+                style={styles.saveButton}
+              />
             </View>
-
-            {/* Standardized Primary Action Button */}
-            <Button
-              label={
-                selectedDay === 'today'
-                  ? 'Guardar Registro de Hoy'
-                  : 'Guardar Registro de Ayer'
-              }
-              icon="cloud-done"
-              onPress={handleSave}
-              loading={saving}
-              style={styles.saveBtn}
-            />
-          </>
+          </View>
         )}
       </ScrollView>
 
-      {/* Confirmation Toast */}
+      {/* Floating Confirmation Toast */}
       <Toast
         visible={toastVisible}
         message={toastMessage}
@@ -330,7 +264,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: 110,
-    maxWidth: 540,
+    maxWidth: 480,
     marginHorizontal: 'auto',
     width: '100%',
   },
@@ -339,11 +273,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceContainerLow,
     borderRadius: spacing.radius.pill,
     padding: 4,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   dayTab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: spacing.radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -352,12 +286,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceContainerLowest,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.06,
     shadowRadius: 3,
     elevation: 2,
   },
   dayTabText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.onSurfaceVariant,
   },
@@ -365,51 +299,22 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '700',
   },
-  titleSection: {
-    marginBottom: spacing.md,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  mainHeading: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.onSurface,
-    letterSpacing: -0.5,
-  },
-  geminiBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.primaryFixed,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: spacing.radius.pill,
-  },
-  geminiBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.onPrimaryFixed,
-  },
-  subHeading: {
-    fontSize: 13,
-    color: colors.onSurfaceVariant,
-    marginTop: 4,
-  },
   loadingContainer: {
-    paddingVertical: 50,
+    paddingVertical: 60,
     alignItems: 'center',
+  },
+  mainFocusArea: {
+    gap: spacing.lg,
   },
   heroCard: {
-    marginBottom: 14,
+    padding: spacing.xl,
+    backgroundColor: colors.surfaceContainerLowest,
   },
   heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   heroLabel: {
     fontSize: 11,
@@ -417,169 +322,68 @@ const styles = StyleSheet.create({
     color: colors.onSurfaceVariant,
     letterSpacing: 1,
   },
-  syncTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.secondaryFixed,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: spacing.radius.pill,
-  },
-  syncDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.secondary,
-  },
-  syncText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.onSecondaryFixed,
-  },
   counterRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'center',
-    gap: 6,
-    marginVertical: 4,
+    gap: 8,
+    marginVertical: spacing.sm,
   },
   calorieInput: {
-    fontSize: 48,
+    fontSize: 56,
     fontWeight: '800',
     color: colors.onSurface,
     letterSpacing: -1,
     textAlign: 'center',
-    minWidth: 140,
+    minWidth: 150,
     padding: 0,
   },
   calorieUnit: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '600',
     color: colors.onSurfaceVariant,
   },
-  stepperRow: {
+  nudgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
-    marginTop: 6,
-    marginBottom: 16,
+    gap: 8,
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
   },
-  stepperButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  nudgeChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: spacing.radius.md,
     backgroundColor: colors.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepperLabel: {
-    fontSize: 11,
-    color: colors.onSurfaceVariant,
-    fontWeight: '500',
+  nudgeChipPositive: {
+    backgroundColor: colors.secondaryContainer,
   },
-  statusPill: {
-    flexDirection: 'row',
+  nudgeChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.onSurfaceVariant,
+  },
+  nudgeChipPositiveText: {
+    color: colors.onSecondaryContainer,
+  },
+  statusFooter: {
+    marginTop: spacing.sm,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+  },
+  statusFooterText: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  actionContainer: {
+    marginTop: spacing.xs,
+  },
+  saveButton: {
+    height: 56,
     borderRadius: spacing.radius.pill,
-    marginBottom: 10,
-  },
-  statusPillLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
-  statusPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    flex: 1,
-  },
-  mealCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 14,
-    marginBottom: 12,
-  },
-  mealImagePlaceholder: {
-    width: 54,
-    height: 54,
-    borderRadius: spacing.radius.md,
-    backgroundColor: colors.primaryFixed,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mealInfo: {
-    flex: 1,
-  },
-  mealTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 2,
-  },
-  mealTag: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.onSurfaceVariant,
-    letterSpacing: 0.8,
-  },
-  mealTime: {
-    fontSize: 11,
-    color: colors.onSurfaceVariant,
-  },
-  mealTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.onSurface,
-  },
-  mealSub: {
-    fontSize: 11,
-    color: colors.onSurfaceVariant,
-    marginTop: 1,
-  },
-  tipCard: {
-    backgroundColor: 'rgba(225, 227, 221, 0.6)',
-    borderRadius: spacing.radius.lg,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginVertical: 10,
-  },
-  tipIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.primaryFixed,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  tipContent: {
-    flex: 1,
-  },
-  tipTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  tipTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  tipText: {
-    fontSize: 12,
-    color: colors.onSurfaceVariant,
-    lineHeight: 18,
-    marginTop: 2,
-  },
-  saveBtn: {
-    marginTop: 14,
   },
 });
